@@ -7,6 +7,29 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 
 ## [Unreleased]
 
+### Adicionado
+
+- Produtos: base pessoal de produtos consumidos com nome padrão, categoria de despesa, metragem (gramas, mililitros ou sem metragem, contado por unidade), metragem por unidade e informação nutricional opcional.
+- Nomes da nota fiscal: cada produto guarda as formas como as notas o escrevem; um nome reconhecido seleciona o produto automaticamente e produtos duplicados podem ser mesclados.
+- Lojas: cadastro de unidades físicas com filial, bairro e endereço.
+- Itens da compra: despesas podem ser detalhadas em produtos com loja, unidades, metragem a granel, valor pago e desconto, direto no formulário de nova despesa ou depois, nos detalhes do lançamento, com o total dos itens comparado ao valor do lançamento.
+- Histórico de preços por produto, normalizado em R$/kg, R$/L ou R$/un, com último, médio, mínimo e máximo e gráficos por data, por loja e por dia da semana.
+- Arquivo `compose.breathe.yml`, que constrói as imagens a partir do código do repositório em um projeto Compose separado (`breathe`).
+- Físico → Corpo: peso e medidas com fita métrica (pescoço, ombros, peitoral, cintura, abdômen, quadril e, de cada lado, braço, antebraço, coxa e panturrilha), registradas por data, com mapa do corpo de frente e de costas, variação e histórico por parte.
+- Físico → Nutrição: calorias e macros estimados pelos itens das compras dos últimos 7, 30 ou 90 dias, com média diária, divisão de energia entre proteínas, carboidratos e gorduras, gráfico por dia e produtos sem calorias cadastradas em destaque.
+- Guia `docs/vps.md`: instalação numa VPS ao lado da Evolution API, sem interferir nos containers existentes, com acesso só por túnel SSH em `http://vps.localhost:8002` e a captura pelo WhatsApp como serviço do systemd do usuário.
+- Captura pelo WhatsApp: fotos de notas fiscais (inclusive várias notas na mesma foto) e mensagens de texto enviadas do seu número para a instância da Evolution API são lidas com `claude -p`, respondidas no WhatsApp com os campos entendidos e guardadas na Caixa de entrada, com foto, loja, forma de pagamento e itens já associados aos produtos conhecidos. Itens sem produto ou loja precisam ser associados ou removidos antes de confirmar.
+- Peso e medidas pelo WhatsApp: mensagens como "peso 82,4, cintura 84" ficam pendentes em Físico → Corpo, com o valor que cada medida substitui, para confirmar, editar ou descartar.
+- Perguntas pelo WhatsApp: perguntas sobre gastos, compras, medidas e nutrição são respondidas na conversa a partir de um recorte somente leitura dos seus dados, sem gravar nada.
+
+### Alterado
+
+- O projeto deixa de ter acesso público: o web também fica vinculado a `127.0.0.1` no `compose.yml`, e o acesso remoto passa a ser só por túnel SSH.
+
+### Removido
+
+- Workflow de publicação de imagens e GitHub Releases, instaladores remotos `install.sh` e `install.ps1` e o guia de implantação em produção.
+
 ## [0.10.2] - 2026-10-04
 
 Corrige o vazamento de layout dos breadcrumbs e padroniza o fundo dos modais mobile,

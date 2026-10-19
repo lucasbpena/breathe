@@ -121,6 +121,29 @@ export function createInboxRoute(service: InboxService) {
       ),
   );
 
+  route.openapi(
+    createRoute({
+      method: "get",
+      path: "/{id}/media",
+      tags: ["Inbox"],
+      request: { params: InboxItemParamsSchema },
+      responses: {
+        200: {
+          description: "Photo a WhatsApp capture was read from",
+          content: { "image/*": { schema: z.string().openapi({ format: "binary" }) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    async (context) => {
+      const media = await service.media(context.req.valid("param").id, context.get("userId"));
+      return context.body(new Uint8Array(media.data), 200, {
+        "Content-Type": media.mimeType,
+        "Content-Disposition": "inline",
+      });
+    },
+  );
+
   for (const action of ["discard", "restore"] as const) {
     route.openapi(
       createRoute({

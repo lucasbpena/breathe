@@ -30,7 +30,13 @@
     "./external-expenses": "./src/external-expenses.ts",
     "./inbox": "./src/inbox.ts",
     "./inbox-rules": "./src/inbox-rules.ts",
-    "./device-tokens": "./src/device-tokens.ts"
+    "./device-tokens": "./src/device-tokens.ts",
+    "./stores": "./src/stores.ts",
+    "./products": "./src/products.ts",
+    "./product-purchases": "./src/product-purchases.ts",
+    "./body-measurements": "./src/body-measurements.ts",
+    "./nutrition-intake": "./src/nutrition-intake.ts",
+    "./receipt-capture": "./src/receipt-capture.ts"
   },
   "scripts": {
     "build": "tsc --noEmit",

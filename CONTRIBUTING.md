@@ -61,7 +61,7 @@ Um pull request deve informar:
 - alterações de contrato ou migration;
 - passos de validação;
 - capturas de tela quando houver mudança visual;
-- impactos de segurança, compatibilidade ou deploy.
+- impactos de segurança ou compatibilidade.
 
 ## Licença das contribuições
 

@@ -2,6 +2,7 @@ import { getCurrentDateInBrazil } from "@openmonetis/shared/date-time";
 import type { AccountOutput } from "@openmonetis/validators/accounts";
 import type { CardOutput } from "@openmonetis/validators/cards";
 import type { PersonOutput } from "@openmonetis/validators/people";
+import type { ReplaceProductPurchaseInput } from "@openmonetis/validators/product-purchases";
 import {
   type TransactionInput,
   TransactionInputSchema,
@@ -53,7 +54,10 @@ export type TransactionCreateDefaults = Partial<
     | "purchaseDate"
     | "startInstallment"
   >
->;
+> & {
+  /** Receipt lines to start with, such as the ones read from a WhatsApp capture. */
+  purchases?: ReplaceProductPurchaseInput[];
+};
 
 type TransactionFieldName = keyof TransactionFormValues;
 

@@ -78,6 +78,34 @@
       "when": 1791065993332,
       "tag": "0010_card_closing_day_purchases",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792374089312,
+      "tag": "0011_products",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1792377200550,
+      "tag": "0012_product_package_unit",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1792417602853,
+      "tag": "0013_body_measurements",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1792444997289,
+      "tag": "0014_whatsapp_capture",
+      "breakpoints": true
     }
   ]
 }

@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as AttachmentsRouteImport } from './routes/attachments'
+import { Route as BodyMeasurementsRouteImport } from './routes/body-measurements'
 import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as CardsRouteImport } from './routes/cards'
 import { Route as CategoriesRouteImport } from './routes/categories'
@@ -20,10 +21,13 @@ import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as GoalsRouteImport } from './routes/goals'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as NotesRouteImport } from './routes/notes'
+import { Route as NutritionIntakeRouteImport } from './routes/nutrition-intake'
 import { Route as PeopleRouteImport } from './routes/people'
+import { Route as ProductsRouteImport } from './routes/products'
 import { Route as RobotsDottxtRouteImport } from './routes/robots[.]txt'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as StoresRouteImport } from './routes/stores'
 import { Route as TransactionsRouteImport } from './routes/transactions'
 import { Route as AccountsAccountIdRouteImport } from './routes/accounts_.$accountId'
 import { Route as ApiProxySplatRouteImport } from './routes/api-proxy.$'
@@ -32,6 +36,7 @@ import { Route as CardsCardIdRouteImport } from './routes/cards_.$cardId'
 import { Route as CategoriesCategoryIdRouteImport } from './routes/categories_.$categoryId'
 import { Route as PeoplePersonIdRouteImport } from './routes/people_.$personId'
 import { Route as PersonConnectionsAcceptRouteImport } from './routes/person-connections.accept'
+import { Route as ProductsProductIdRouteImport } from './routes/products_.$productId'
 import { Route as ReportsCategoryTrendsRouteImport } from './routes/reports/category-trends'
 import { Route as ReportsInstallmentsRouteImport } from './routes/reports/installments'
 import { Route as ReportsRecurringExpensesRouteImport } from './routes/reports/recurring-expenses'
@@ -50,6 +55,11 @@ const AccountsRoute = AccountsRouteImport.update({
 const AttachmentsRoute = AttachmentsRouteImport.update({
   id: '/attachments',
   path: '/attachments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BodyMeasurementsRoute = BodyMeasurementsRouteImport.update({
+  id: '/body-measurements',
+  path: '/body-measurements',
   getParentRoute: () => rootRouteImport,
 } as any)
 const BudgetsRoute = BudgetsRouteImport.update({
@@ -92,9 +102,19 @@ const NotesRoute = NotesRouteImport.update({
   path: '/notes',
   getParentRoute: () => rootRouteImport,
 } as any)
+const NutritionIntakeRoute = NutritionIntakeRouteImport.update({
+  id: '/nutrition-intake',
+  path: '/nutrition-intake',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PeopleRoute = PeopleRouteImport.update({
   id: '/people',
   path: '/people',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProductsRoute = ProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RobotsDottxtRoute = RobotsDottxtRouteImport.update({
@@ -110,6 +130,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const StoresRoute = StoresRouteImport.update({
+  id: '/stores',
+  path: '/stores',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TransactionsRoute = TransactionsRouteImport.update({
@@ -152,6 +177,11 @@ const PersonConnectionsAcceptRoute = PersonConnectionsAcceptRouteImport.update({
   path: '/person-connections/accept',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ProductsProductIdRoute = ProductsProductIdRouteImport.update({
+  id: '/products_/$productId',
+  path: '/products/$productId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ReportsCategoryTrendsRoute = ReportsCategoryTrendsRouteImport.update({
   id: '/reports/category-trends',
   path: '/reports/category-trends',
@@ -178,6 +208,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/attachments': typeof AttachmentsRoute
+  '/body-measurements': typeof BodyMeasurementsRoute
   '/budgets': typeof BudgetsRoute
   '/cards': typeof CardsRoute
   '/categories': typeof CategoriesRoute
@@ -186,10 +217,13 @@ export interface FileRoutesByFullPath {
   '/goals': typeof GoalsRoute
   '/inbox': typeof InboxRoute
   '/notes': typeof NotesRoute
+  '/nutrition-intake': typeof NutritionIntakeRoute
   '/people': typeof PeopleRoute
+  '/products': typeof ProductsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stores': typeof StoresRoute
   '/transactions': typeof TransactionsRoute
   '/accounts/$accountId': typeof AccountsAccountIdRoute
   '/api-proxy/$': typeof ApiProxySplatRoute
@@ -198,6 +232,7 @@ export interface FileRoutesByFullPath {
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
   '/people/$personId': typeof PeoplePersonIdRoute
   '/person-connections/accept': typeof PersonConnectionsAcceptRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/reports/category-trends': typeof ReportsCategoryTrendsRoute
   '/reports/installments': typeof ReportsInstallmentsRoute
   '/reports/recurring-expenses': typeof ReportsRecurringExpensesRoute
@@ -207,6 +242,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/attachments': typeof AttachmentsRoute
+  '/body-measurements': typeof BodyMeasurementsRoute
   '/budgets': typeof BudgetsRoute
   '/cards': typeof CardsRoute
   '/categories': typeof CategoriesRoute
@@ -215,10 +251,13 @@ export interface FileRoutesByTo {
   '/goals': typeof GoalsRoute
   '/inbox': typeof InboxRoute
   '/notes': typeof NotesRoute
+  '/nutrition-intake': typeof NutritionIntakeRoute
   '/people': typeof PeopleRoute
+  '/products': typeof ProductsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stores': typeof StoresRoute
   '/transactions': typeof TransactionsRoute
   '/accounts/$accountId': typeof AccountsAccountIdRoute
   '/api-proxy/$': typeof ApiProxySplatRoute
@@ -227,6 +266,7 @@ export interface FileRoutesByTo {
   '/categories/$categoryId': typeof CategoriesCategoryIdRoute
   '/people/$personId': typeof PeoplePersonIdRoute
   '/person-connections/accept': typeof PersonConnectionsAcceptRoute
+  '/products/$productId': typeof ProductsProductIdRoute
   '/reports/category-trends': typeof ReportsCategoryTrendsRoute
   '/reports/installments': typeof ReportsInstallmentsRoute
   '/reports/recurring-expenses': typeof ReportsRecurringExpensesRoute
@@ -237,6 +277,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRoute
   '/attachments': typeof AttachmentsRoute
+  '/body-measurements': typeof BodyMeasurementsRoute
   '/budgets': typeof BudgetsRoute
   '/cards': typeof CardsRoute
   '/categories': typeof CategoriesRoute
@@ -245,10 +286,13 @@ export interface FileRoutesById {
   '/goals': typeof GoalsRoute
   '/inbox': typeof InboxRoute
   '/notes': typeof NotesRoute
+  '/nutrition-intake': typeof NutritionIntakeRoute
   '/people': typeof PeopleRoute
+  '/products': typeof ProductsRoute
   '/robots.txt': typeof RobotsDottxtRoute
   '/settings': typeof SettingsRoute
   '/signup': typeof SignupRoute
+  '/stores': typeof StoresRoute
   '/transactions': typeof TransactionsRoute
   '/accounts_/$accountId': typeof AccountsAccountIdRoute
   '/api-proxy/$': typeof ApiProxySplatRoute
@@ -257,6 +301,7 @@ export interface FileRoutesById {
   '/categories_/$categoryId': typeof CategoriesCategoryIdRoute
   '/people_/$personId': typeof PeoplePersonIdRoute
   '/person-connections/accept': typeof PersonConnectionsAcceptRoute
+  '/products_/$productId': typeof ProductsProductIdRoute
   '/reports/category-trends': typeof ReportsCategoryTrendsRoute
   '/reports/installments': typeof ReportsInstallmentsRoute
   '/reports/recurring-expenses': typeof ReportsRecurringExpensesRoute
@@ -268,6 +313,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/attachments'
+    | '/body-measurements'
     | '/budgets'
     | '/cards'
     | '/categories'
@@ -276,10 +322,13 @@ export interface FileRouteTypes {
     | '/goals'
     | '/inbox'
     | '/notes'
+    | '/nutrition-intake'
     | '/people'
+    | '/products'
     | '/robots.txt'
     | '/settings'
     | '/signup'
+    | '/stores'
     | '/transactions'
     | '/accounts/$accountId'
     | '/api-proxy/$'
@@ -288,6 +337,7 @@ export interface FileRouteTypes {
     | '/categories/$categoryId'
     | '/people/$personId'
     | '/person-connections/accept'
+    | '/products/$productId'
     | '/reports/category-trends'
     | '/reports/installments'
     | '/reports/recurring-expenses'
@@ -297,6 +347,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/attachments'
+    | '/body-measurements'
     | '/budgets'
     | '/cards'
     | '/categories'
@@ -305,10 +356,13 @@ export interface FileRouteTypes {
     | '/goals'
     | '/inbox'
     | '/notes'
+    | '/nutrition-intake'
     | '/people'
+    | '/products'
     | '/robots.txt'
     | '/settings'
     | '/signup'
+    | '/stores'
     | '/transactions'
     | '/accounts/$accountId'
     | '/api-proxy/$'
@@ -317,6 +371,7 @@ export interface FileRouteTypes {
     | '/categories/$categoryId'
     | '/people/$personId'
     | '/person-connections/accept'
+    | '/products/$productId'
     | '/reports/category-trends'
     | '/reports/installments'
     | '/reports/recurring-expenses'
@@ -326,6 +381,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/attachments'
+    | '/body-measurements'
     | '/budgets'
     | '/cards'
     | '/categories'
@@ -334,10 +390,13 @@ export interface FileRouteTypes {
     | '/goals'
     | '/inbox'
     | '/notes'
+    | '/nutrition-intake'
     | '/people'
+    | '/products'
     | '/robots.txt'
     | '/settings'
     | '/signup'
+    | '/stores'
     | '/transactions'
     | '/accounts_/$accountId'
     | '/api-proxy/$'
@@ -346,6 +405,7 @@ export interface FileRouteTypes {
     | '/categories_/$categoryId'
     | '/people_/$personId'
     | '/person-connections/accept'
+    | '/products_/$productId'
     | '/reports/category-trends'
     | '/reports/installments'
     | '/reports/recurring-expenses'
@@ -356,6 +416,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRoute
   AttachmentsRoute: typeof AttachmentsRoute
+  BodyMeasurementsRoute: typeof BodyMeasurementsRoute
   BudgetsRoute: typeof BudgetsRoute
   CardsRoute: typeof CardsRoute
   CategoriesRoute: typeof CategoriesRoute
@@ -364,10 +425,13 @@ export interface RootRouteChildren {
   GoalsRoute: typeof GoalsRoute
   InboxRoute: typeof InboxRoute
   NotesRoute: typeof NotesRoute
+  NutritionIntakeRoute: typeof NutritionIntakeRoute
   PeopleRoute: typeof PeopleRoute
+  ProductsRoute: typeof ProductsRoute
   RobotsDottxtRoute: typeof RobotsDottxtRoute
   SettingsRoute: typeof SettingsRoute
   SignupRoute: typeof SignupRoute
+  StoresRoute: typeof StoresRoute
   TransactionsRoute: typeof TransactionsRoute
   AccountsAccountIdRoute: typeof AccountsAccountIdRoute
   ApiProxySplatRoute: typeof ApiProxySplatRoute
@@ -376,6 +440,7 @@ export interface RootRouteChildren {
   CategoriesCategoryIdRoute: typeof CategoriesCategoryIdRoute
   PeoplePersonIdRoute: typeof PeoplePersonIdRoute
   PersonConnectionsAcceptRoute: typeof PersonConnectionsAcceptRoute
+  ProductsProductIdRoute: typeof ProductsProductIdRoute
   ReportsCategoryTrendsRoute: typeof ReportsCategoryTrendsRoute
   ReportsInstallmentsRoute: typeof ReportsInstallmentsRoute
   ReportsRecurringExpensesRoute: typeof ReportsRecurringExpensesRoute
@@ -403,6 +468,13 @@ declare module '@tanstack/react-router' {
       path: '/attachments'
       fullPath: '/attachments'
       preLoaderRoute: typeof AttachmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/body-measurements': {
+      id: '/body-measurements'
+      path: '/body-measurements'
+      fullPath: '/body-measurements'
+      preLoaderRoute: typeof BodyMeasurementsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/budgets': {
@@ -461,11 +533,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof NotesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/nutrition-intake': {
+      id: '/nutrition-intake'
+      path: '/nutrition-intake'
+      fullPath: '/nutrition-intake'
+      preLoaderRoute: typeof NutritionIntakeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/people': {
       id: '/people'
       path: '/people'
       fullPath: '/people'
       preLoaderRoute: typeof PeopleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/products': {
+      id: '/products'
+      path: '/products'
+      fullPath: '/products'
+      preLoaderRoute: typeof ProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/robots.txt': {
@@ -487,6 +573,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/stores': {
+      id: '/stores'
+      path: '/stores'
+      fullPath: '/stores'
+      preLoaderRoute: typeof StoresRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/transactions': {
@@ -545,6 +638,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PersonConnectionsAcceptRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/products_/$productId': {
+      id: '/products_/$productId'
+      path: '/products/$productId'
+      fullPath: '/products/$productId'
+      preLoaderRoute: typeof ProductsProductIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reports/category-trends': {
       id: '/reports/category-trends'
       path: '/reports/category-trends'
@@ -580,6 +680,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRoute,
   AttachmentsRoute: AttachmentsRoute,
+  BodyMeasurementsRoute: BodyMeasurementsRoute,
   BudgetsRoute: BudgetsRoute,
   CardsRoute: CardsRoute,
   CategoriesRoute: CategoriesRoute,
@@ -588,10 +689,13 @@ const rootRouteChildren: RootRouteChildren = {
   GoalsRoute: GoalsRoute,
   InboxRoute: InboxRoute,
   NotesRoute: NotesRoute,
+  NutritionIntakeRoute: NutritionIntakeRoute,
   PeopleRoute: PeopleRoute,
+  ProductsRoute: ProductsRoute,
   RobotsDottxtRoute: RobotsDottxtRoute,
   SettingsRoute: SettingsRoute,
   SignupRoute: SignupRoute,
+  StoresRoute: StoresRoute,
   TransactionsRoute: TransactionsRoute,
   AccountsAccountIdRoute: AccountsAccountIdRoute,
   ApiProxySplatRoute: ApiProxySplatRoute,
@@ -600,6 +704,7 @@ const rootRouteChildren: RootRouteChildren = {
   CategoriesCategoryIdRoute: CategoriesCategoryIdRoute,
   PeoplePersonIdRoute: PeoplePersonIdRoute,
   PersonConnectionsAcceptRoute: PersonConnectionsAcceptRoute,
+  ProductsProductIdRoute: ProductsProductIdRoute,
   ReportsCategoryTrendsRoute: ReportsCategoryTrendsRoute,
   ReportsInstallmentsRoute: ReportsInstallmentsRoute,
   ReportsRecurringExpensesRoute: ReportsRecurringExpensesRoute,

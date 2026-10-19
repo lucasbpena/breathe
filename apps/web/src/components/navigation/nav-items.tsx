@@ -8,8 +8,12 @@ import {
   Inbox,
   Landmark,
   NotebookText,
+  Package,
   Paperclip,
+  PersonStanding,
   Repeat2,
+  Salad,
+  Store,
   Tags,
   Target,
   Users,
@@ -51,7 +55,7 @@ export const navSections: NavSection[] = [
       {
         href: "/inbox",
         label: "Caixa de entrada",
-        description: "Revise as capturas do Companion",
+        description: "Revise as capturas do Companion e do WhatsApp",
         icon: <Inbox className="size-4" aria-hidden="true" />,
       },
       {
@@ -92,6 +96,40 @@ export const navSections: NavSection[] = [
         label: "Metas",
         description: "Objetivos de economia e progresso",
         icon: <Goal className="size-4" aria-hidden="true" />,
+      },
+    ],
+  },
+  {
+    label: "Consumo",
+    items: [
+      {
+        href: "/products",
+        label: "Produtos",
+        description: "Produtos comprados e histórico de preços",
+        icon: <Package className="size-4" aria-hidden="true" />,
+      },
+      {
+        href: "/stores",
+        label: "Lojas",
+        description: "Unidades onde você compra",
+        icon: <Store className="size-4" aria-hidden="true" />,
+      },
+    ],
+  },
+  {
+    label: "Físico",
+    items: [
+      {
+        href: "/body-measurements",
+        label: "Corpo",
+        description: "Peso e medidas por parte do corpo",
+        icon: <PersonStanding className="size-4" aria-hidden="true" />,
+      },
+      {
+        href: "/nutrition-intake",
+        label: "Nutrição",
+        description: "Calorias e macros dos itens comprados",
+        icon: <Salad className="size-4" aria-hidden="true" />,
       },
     ],
   },

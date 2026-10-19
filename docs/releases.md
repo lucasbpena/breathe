@@ -1,4 +1,4 @@
-# Versionamento e publicação
+# Versionamento
 
 O OpenMonetis usa versões estáveis no formato `MAJOR.MINOR.PATCH`. A versão raiz é a referência da
 release e deve permanecer igual em todos os `package.json` do workspace, no badge do `README.md` e
@@ -14,19 +14,11 @@ na entrada correspondente do `CHANGELOG.md`.
 5. Execute `pnpm release:check`, `pnpm check`, `pnpm test` e `pnpm build`.
 6. Envie a mudança para `main` e aguarde a CI passar.
 
-## Publicar
+## Sem publicação
 
-A publicação só é iniciada por uma tag anotada `vX.Y.Z` que aponte para o commit validado na
-`main`. O workflow confere os metadados novamente, publica as três imagens no GHCR com tags
-`X.Y.Z`, `X.Y`, `X` e `latest` e só então cria a GitHub Release com as notas extraídas do changelog.
-
-```bash
-git tag -a v0.1.0 -m "v0.1.0"
-git push origin v0.1.0
-```
-
-Criar ou enviar uma tag publica artefatos externos. Essa ação exige autorização explícita do
-mantenedor e não faz parte da preparação normal de uma versão.
+O projeto não tem acesso público. Não há workflow que publique imagens ou crie GitHub Releases: as
+imagens são construídas na própria máquina, ou na VPS (`docs/vps.md`), com `compose.breathe.yml`. Uma tag
+`vX.Y.Z` apenas marca o commit e exige autorização explícita do mantenedor.
 
 ## Comportamento da aplicação
 

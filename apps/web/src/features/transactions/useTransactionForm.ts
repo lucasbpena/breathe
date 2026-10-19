@@ -1,3 +1,4 @@
+import type { ReplaceProductPurchaseInput } from "@openmonetis/validators/product-purchases";
 import type { TransactionInput } from "@openmonetis/validators/transactions";
 import { useForm } from "@tanstack/react-form";
 import { useImperativeHandle, useMemo, useState } from "react";
@@ -30,6 +31,9 @@ export function useTransactionForm({
   const mobile = useIsMobile();
 
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const [pendingPurchases, setPendingPurchases] = useState<ReplaceProductPurchaseInput[]>(
+    () => createDefaults?.purchases ?? [],
+  );
   const [pendingInstallmentUpdate, setPendingInstallmentUpdate] = useState<{
     data: TransactionInput;
     value: TransactionFormValues;
@@ -81,6 +85,8 @@ export function useTransactionForm({
       onSaved,
       pendingFiles,
       setPendingFiles,
+      pendingPurchases,
+      setPendingPurchases,
       setPendingRecurringUpdate,
       setPendingInstallmentUpdate,
       defaultValues,
@@ -106,7 +112,8 @@ export function useTransactionForm({
   });
 
   useImperativeHandle(ref, () => ({
-    hasUnsavedChanges: () => form.state.isDirty || pendingFiles.length > 0,
+    hasUnsavedChanges: () =>
+      form.state.isDirty || pendingFiles.length > 0 || pendingPurchases.length > 0,
     isSubmitting: () => form.state.isSubmitting,
   }));
 
@@ -164,6 +171,8 @@ export function useTransactionForm({
     updateRecurringRule,
     pendingFiles,
     setPendingFiles,
+    pendingPurchases,
+    setPendingPurchases,
     pendingInstallmentUpdate,
     setPendingInstallmentUpdate,
     pendingRecurringUpdate,

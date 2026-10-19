@@ -1,3 +1,4 @@
+import type { ReplaceProductPurchaseInput } from "@openmonetis/validators/product-purchases";
 import type {
   TransactionActionScope,
   TransactionInput,
@@ -9,6 +10,12 @@ import type { Dispatch, SetStateAction } from "react";
 import { toast } from "sonner";
 import { uploadAttachment } from "@/features/attachments/attachments.api";
 import { attachmentKeys } from "@/features/attachments/attachments.queries";
+import { createProductPurchases } from "@/features/product-purchases/product-purchases.api";
+import {
+  getPurchaseErrorMessage,
+  hasUnresolvedPurchase,
+} from "@/features/product-purchases/product-purchases.presentation";
+import { refreshFinancialQueries } from "@/lib/financial-query-invalidation";
 import type { TransactionFormProps } from "./components/transaction-form.types";
 import {
   getChangedTransactionInput,
@@ -30,6 +37,8 @@ export function useTransactionFormSubmission({
   onSaved,
   pendingFiles,
   setPendingFiles,
+  pendingPurchases,
+  setPendingPurchases,
   setPendingRecurringUpdate,
   setPendingInstallmentUpdate,
   defaultValues,
@@ -42,6 +51,8 @@ export function useTransactionFormSubmission({
   onSaved: TransactionFormProps["onSaved"];
   pendingFiles: File[];
   setPendingFiles: Dispatch<SetStateAction<File[]>>;
+  pendingPurchases: ReplaceProductPurchaseInput[];
+  setPendingPurchases: Dispatch<SetStateAction<ReplaceProductPurchaseInput[]>>;
   setPendingRecurringUpdate: Dispatch<SetStateAction<TransactionInput | null>>;
   setPendingInstallmentUpdate: Dispatch<
     SetStateAction<{ data: TransactionInput; value: TransactionFormValues } | null>
@@ -90,6 +101,17 @@ export function useTransactionFormSubmission({
         return;
       }
 
+      if (
+        data.type === "expense" &&
+        data.condition !== "recurring" &&
+        hasUnresolvedPurchase(pendingPurchases)
+      ) {
+        toast.error("Há itens da compra sem produto ou loja", {
+          description: "Associe cada item a um produto e a uma loja, ou remova-o, antes de salvar.",
+        });
+        return;
+      }
+
       const created = onCreate ? await onCreate(data) : await createTransaction.mutateAsync(data);
       const uploadResults = created.recordId
         ? await Promise.allSettled(
@@ -99,6 +121,19 @@ export function useTransactionFormSubmission({
       const failedUploads = created.recordId
         ? uploadResults.filter((result) => result.status === "rejected").length
         : pendingFiles.length;
+
+      // Receipt lines only belong to persisted expenses; the form hides them otherwise.
+      const purchasesError =
+        pendingPurchases.length && created.recordId && created.type === "expense"
+          ? await createProductPurchases({
+              transactionId: created.recordId,
+              items: pendingPurchases,
+            }).then(
+              () => null,
+              (error: unknown) => error,
+            )
+          : null;
+      if (pendingPurchases.length) await refreshFinancialQueries(queryClient);
 
       if (pendingFiles.length) {
         await Promise.all([
@@ -114,13 +149,23 @@ export function useTransactionFormSubmission({
               ? "1 arquivo não foi enviado. Edite o lançamento para tentar novamente."
               : `${failedUploads} arquivos não foram enviados. Edite o lançamento para tentar novamente.`,
         });
-      } else {
+      }
+      if (purchasesError) {
+        toast.warning("Lançamento salvo, mas os itens da compra não foram registrados", {
+          description: getPurchaseErrorMessage(
+            purchasesError,
+            "Abra os detalhes do lançamento para adicioná-los novamente.",
+          ),
+        });
+      }
+      if (!failedUploads && !purchasesError) {
         toast.success("Lançamento salvo", {
           description: `${data.name} foi cadastrado com sucesso.`,
         });
       }
       resetForm();
       setPendingFiles([]);
+      setPendingPurchases([]);
       if (onCreated) {
         try {
           await onCreated(created);

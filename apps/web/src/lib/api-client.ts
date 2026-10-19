@@ -2,6 +2,11 @@ import type { ApiFailure, ApiSuccess } from "@openmonetis/shared/api";
 
 const apiUrl = "/api-proxy";
 
+/** Same-origin URL for API resources loaded by the browser itself, such as images. */
+export function getApiUrl(path: string) {
+  return `${apiUrl}${path}`;
+}
+
 type ApiErrorDetails = {
   code?: string;
   message: string;

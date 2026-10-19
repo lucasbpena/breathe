@@ -16,8 +16,7 @@
 </p>
 
 <p align="center">
-  <a href="#instalação-rápida">Instalação</a> ·
-  <a href="docs/production-deployment.md">Produção</a> ·
+  <a href="#execução-local">Execução local</a> ·
   <a href="docs/architecture.md">Arquitetura</a> ·
   <a href="CHANGELOG.md">Changelog</a> ·
   <a href="CONTRIBUTING.md">Contribuir</a>
@@ -38,40 +37,32 @@
 - importação por planilha e caixa de entrada do Companion Android com regras configuráveis de
   categorização e pessoa.
 
-## Instalação rápida
+## Execução local
 
-Tenha Git e Docker com o plugin Compose instalados.
-
-### Linux e macOS
+Este fork não tem acesso público: não há instalador remoto, imagens publicadas nem deploy
+acessível pela internet. Tenha Git e Docker com o plugin Compose instalados e construa
+as imagens a partir do código:
 
 ```bash
-curl -fsSL https://github.com/felipegcoutinho/openmonetis-v2/raw/refs/heads/main/install.sh | bash
+cp .env.example .env
+docker compose -f compose.yml -f compose.breathe.yml up -d --build
 ```
 
-### Windows
-
-No PowerShell, com o Docker Desktop em execução:
-
-```powershell
-irm https://github.com/felipegcoutinho/openmonetis-v2/raw/refs/heads/main/install.ps1 | iex
-```
-
-Abra [http://localhost:7002](http://localhost:7002) e crie sua conta. Antes de executar um script
-remoto, você pode revisar o [`install.sh`](install.sh) ou o [`install.ps1`](install.ps1).
-
-Para publicar a aplicação com HTTPS, storage privado e segredos próprios, consulte o
-[`guia de produção`](docs/production-deployment.md).
+Abra [http://localhost:7002](http://localhost:7002) e crie sua conta. O web e o PostgreSQL ficam
+vinculados a `127.0.0.1`. Como o cadastro de contas não pode ser desativado, não exponha a porta
+7002 na rede nem na internet (proxy público, túnel público, Tailscale Serve ou Funnel). Para rodar
+numa VPS acessada só por túnel SSH, siga [docs/vps.md](docs/vps.md).
 
 ## Antes de usar
 
-- O OpenMonetis é self-hosted: banco, storage, HTTPS, atualizações e backups são responsabilidade de
-  quem mantém a instalação.
+- O projeto roda só na máquina local: banco, storage, atualizações e backups são responsabilidade
+  de quem mantém a instalação.
 - Não existe integração com Open Finance. Os dados são inseridos manualmente, por planilha ou pelo
   fluxo de revisão do Companion.
 - O único cliente implementado neste monorepo é o web. O Companion Android é um projeto externo
   que usa os endpoints de integração documentados e não substitui um aplicativo mobile completo.
 - A recuperação da instalação é operacional: preserve o PostgreSQL com `pg_dump`, o bucket de
-  anexos e os segredos da implantação conforme o guia de produção.
+  anexos e os segredos do `.env`.
 
 ## Desenvolvimento
 
@@ -124,8 +115,6 @@ detalhes e as convenções no [`guia de arquitetura`](docs/architecture.md).
 
 ## Documentação
 
-- [`docs/production-deployment.md`](docs/production-deployment.md): instalação, atualização,
-  segurança operacional e backups;
 - [`docs/architecture.md`](docs/architecture.md): camadas, decisões e estrutura do monorepo;
 - [`docs/companion-api.md`](docs/companion-api.md): contrato do Companion;
 - [`CONTRIBUTING.md`](CONTRIBUTING.md): fluxo para contribuições;

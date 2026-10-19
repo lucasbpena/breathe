@@ -1,6 +1,8 @@
 import {
   account,
   attachments,
+  bodyMeasurementDrafts,
+  bodyMeasurements,
   budgets,
   cards,
   categories,
@@ -27,10 +29,14 @@ import {
   personConnectionInvitations,
   personConnections,
   personSettlements,
+  productAliases,
+  productPurchases,
+  products,
   recurringTransactionOccurrences,
   recurringTransactionRules,
   recurringTransactionSplits,
   session,
+  stores,
   transactionAttachments,
   transactionRefunds,
   transactionSplits,
@@ -38,6 +44,7 @@ import {
   user,
   userPreferences,
   verification,
+  whatsappMessages,
 } from "@openmonetis/db";
 import { and, eq, inArray, isNotNull, notInArray, or } from "drizzle-orm";
 import type { SettingsRepository, SettingsResetDraft } from "../services/settings.service";
@@ -93,6 +100,8 @@ async function clearApplicationDataForUser(transaction: DatabaseTransaction, use
       ),
     );
   await transaction.delete(inboxItems).where(eq(inboxItems.userId, userId));
+  await transaction.delete(bodyMeasurementDrafts).where(eq(bodyMeasurementDrafts.userId, userId));
+  await transaction.delete(whatsappMessages).where(eq(whatsappMessages.userId, userId));
   await transaction.delete(inboxRules).where(eq(inboxRules.userId, userId));
   await transaction.delete(deviceTokens).where(eq(deviceTokens.userId, userId));
   await transaction.delete(notificationStates).where(eq(notificationStates.userId, userId));
@@ -114,6 +123,7 @@ async function clearApplicationDataForUser(transaction: DatabaseTransaction, use
     .delete(recurringTransactionOccurrences)
     .where(eq(recurringTransactionOccurrences.userId, userId));
   await transaction.delete(transactionAttachments).where(eq(transactionAttachments.userId, userId));
+  await transaction.delete(productPurchases).where(eq(productPurchases.userId, userId));
   await transaction
     .delete(installmentAnticipations)
     .where(eq(installmentAnticipations.userId, userId));
@@ -132,6 +142,10 @@ async function clearApplicationDataForUser(transaction: DatabaseTransaction, use
   await transaction.delete(noteItems).where(eq(noteItems.userId, userId));
   await transaction.delete(notes).where(eq(notes.userId, userId));
   await transaction.delete(establishmentLogos).where(eq(establishmentLogos.userId, userId));
+  await transaction.delete(productAliases).where(eq(productAliases.userId, userId));
+  await transaction.delete(products).where(eq(products.userId, userId));
+  await transaction.delete(stores).where(eq(stores.userId, userId));
+  await transaction.delete(bodyMeasurements).where(eq(bodyMeasurements.userId, userId));
   // Keep people referenced by a connection or invitation. Those rows are part of the bilateral
   // aggregate and are protected by restrictive foreign keys.
   await transaction

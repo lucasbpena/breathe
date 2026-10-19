@@ -13,11 +13,15 @@ const financialQueryRoots = new Set([
   "inbox",
   "invoices",
   "notifications",
+  "nutrition-intake",
   "people",
   "person-settlements",
+  "product-purchases",
+  "products",
   "recurring-expenses",
   "external-expenses",
   "goals",
+  "stores",
   "transactions",
 ]);
 

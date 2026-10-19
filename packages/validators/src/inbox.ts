@@ -10,6 +10,7 @@ import {
   inboxSourceAppMaximumLength,
   inboxSourceAppNameMaximumLength,
 } from "@openmonetis/domain/inbox";
+import { InboxReceiptOutputSchema } from "./receipt-capture";
 
 const optionalTrimmedString = (maximumLength: number) =>
   z.string().trim().min(1).max(maximumLength).nullish();
@@ -119,6 +120,8 @@ export const InboxItemSummaryOutputSchema = z
     discardedAt: z.iso.datetime().nullable(),
     createdAt: z.iso.datetime(),
     updatedAt: z.iso.datetime(),
+    /** Present for captures read from a WhatsApp message. */
+    receipt: InboxReceiptOutputSchema.nullable(),
   })
   .openapi("InboxItemSummary");
 

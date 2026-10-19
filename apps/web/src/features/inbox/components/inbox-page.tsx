@@ -170,7 +170,7 @@ export function InboxPage({
     <section className="app-page project-container min-w-0">
       <PageHeader
         breadcrumbs={[{ label: "Visão geral", href: "/dashboard" }, { label: "Caixa de entrada" }]}
-        description="Revise as capturas do Companion antes de transformá-las em lançamentos."
+        description="Revise as capturas do Companion e do WhatsApp antes de transformá-las em lançamentos."
         icon={<Inbox aria-hidden="true" className="size-5" />}
         title="Caixa de entrada"
         actions={

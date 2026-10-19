@@ -83,7 +83,7 @@ services:
       S3_ENDPOINT: ${S3_ENDPOINT}
       S3_REGION: ${S3_REGION}
     ports:
-      - "${APP_PORT}:7002"
+      - "127.0.0.1:${APP_PORT}:7002"
     depends_on:
       api:
         condition: service_healthy

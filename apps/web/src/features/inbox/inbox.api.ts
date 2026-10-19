@@ -7,7 +7,7 @@ import type {
   InboxSnapshotOutput,
 } from "@openmonetis/validators/inbox";
 import type { TransactionInput, TransactionOutput } from "@openmonetis/validators/transactions";
-import { requestApi } from "@/lib/api-client";
+import { getApiUrl, requestApi } from "@/lib/api-client";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return requestApi<T>(path, init, { errorMessage: "inbox_request_failed" });
@@ -30,6 +30,10 @@ export function getInboxItems(search: {
   if (search.notificationDate) params.set("notificationDate", search.notificationDate);
   if (search.ruleId) params.set("ruleId", search.ruleId);
   return request<InboxPageOutput>(`/inbox?${params.toString()}`);
+}
+
+export function getInboxMediaUrl(id: string) {
+  return getApiUrl(`/inbox/${id}/media`);
 }
 
 export function getInboxSnapshot(limit = 4) {

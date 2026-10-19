@@ -9,6 +9,8 @@ import {
   summarizePendingInboxBySource,
 } from "@openmonetis/domain/inbox";
 import { resolveInboxRules } from "@openmonetis/domain/inbox-rules";
+import type { ReceiptMatchSource } from "@openmonetis/domain/receipt-capture";
+import type { PaymentMethod } from "@openmonetis/domain/transactions";
 import type {
   CompanionInboxItemInput,
   InboxItemOutput,
@@ -17,6 +19,7 @@ import type {
   InboxSnapshotOutput,
   ListInboxItemsQuery,
 } from "@openmonetis/validators/inbox";
+import type { InboxReceiptOutput } from "@openmonetis/validators/receipt-capture";
 import type { TransactionInput, TransactionOutput } from "@openmonetis/validators/transactions";
 import { ApiError, badRequest, conflict, notFound } from "../utils/errors";
 import { availableInboxRuleCandidates, type InboxRulesRepository } from "./inbox-rules.service";
@@ -40,6 +43,32 @@ export type InboxItemRecord = {
   discardedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
+};
+
+export type InboxReceiptRecord = {
+  inboxItemId: string;
+  storeId: string | null;
+  storeMatch: ReceiptMatchSource;
+  storeName: string | null;
+  storeBranch: string | null;
+  storeNeighborhood: string | null;
+  storeAddress: string | null;
+  paymentMethod: PaymentMethod | null;
+  itemsAmount: string;
+  totalMismatch: boolean;
+  warnings: string[];
+  hasMedia: boolean;
+  lines: {
+    id: string;
+    position: number;
+    extractedName: string;
+    productId: string | null;
+    productMatch: ReceiptMatchSource;
+    packageCount: string | null;
+    totalContent: string | null;
+    paidAmount: string;
+    discountAmount: string;
+  }[];
 };
 
 type InboxItemDraft = Omit<
@@ -86,6 +115,8 @@ export type InboxRepository = {
   }): Promise<InboxItemRecord | null>;
   deleteForUser(id: string, userId: string): Promise<boolean>;
   deleteByStatusForUser(status: InboxClearableStatus, userId: string): Promise<number>;
+  listReceiptsForUser(userId: string, inboxItemIds: string[]): Promise<InboxReceiptRecord[]>;
+  findMediaForUser(id: string, userId: string): Promise<{ mimeType: string; data: Buffer } | null>;
 };
 
 type InboxIngestionContext = {
@@ -222,8 +253,9 @@ export function createInboxService(
         result.activeCards,
         result.activeAccounts,
       );
+      const receipts = await loadReceipts(result.items, userId);
       return {
-        items: result.items.map(toSummaryOutput),
+        items: result.items.map((item) => toSummaryOutput(item, receipts.get(item.id))),
         sourceApps: result.sourceApps,
         notificationDates: result.notificationDates,
         counts: result.counts,
@@ -250,7 +282,16 @@ export function createInboxService(
     },
 
     async get(id: string, userId: string): Promise<InboxItemOutput> {
-      return toOutput(await findItem(id, userId, repository));
+      const item = await findItem(id, userId, repository);
+      const receipts = await loadReceipts([item], userId);
+      return toOutput(item, receipts.get(item.id));
+    },
+
+    /** The photo a WhatsApp capture was read from. */
+    async media(id: string, userId: string) {
+      const media = await repository.findMediaForUser(id, userId);
+      if (!media) throw notFound("Inbox media not found", "inbox_media_not_found");
+      return media;
     },
 
     async discard(id: string, userId: string) {
@@ -314,7 +355,18 @@ export function createInboxService(
     if (!updated) {
       throw conflict("The inbox item changed. Reload and try again", "inbox_item_state_conflict");
     }
-    return toSummaryOutput(updated);
+    const receipts = await loadReceipts([updated], userId);
+    return toSummaryOutput(updated, receipts.get(updated.id));
+  }
+
+  async function loadReceipts(items: InboxItemRecord[], userId: string) {
+    const receipts = items.length
+      ? await repository.listReceiptsForUser(
+          userId,
+          items.map((item) => item.id),
+        )
+      : [];
+    return new Map(receipts.map((receipt) => [receipt.inboxItemId, receipt]));
   }
 }
 
@@ -384,16 +436,19 @@ async function findItem(id: string, userId: string, repository: InboxRepository)
   return item;
 }
 
-function toOutput(record: InboxItemRecord): InboxItemOutput {
+function toOutput(record: InboxItemRecord, receipt?: InboxReceiptRecord): InboxItemOutput {
   return {
-    ...toSummaryOutput(record),
+    ...toSummaryOutput(record, receipt),
     sourceApp: record.sourceApp,
     originalTitle: record.originalTitle,
     originalText: record.originalText,
   };
 }
 
-function toSummaryOutput(record: InboxItemRecord): InboxItemSummaryOutput {
+function toSummaryOutput(
+  record: InboxItemRecord,
+  receipt?: InboxReceiptRecord,
+): InboxItemSummaryOutput {
   return {
     id: record.id,
     sourceAppName: record.sourceAppName,
@@ -407,6 +462,35 @@ function toSummaryOutput(record: InboxItemRecord): InboxItemSummaryOutput {
     discardedAt: record.discardedAt?.toISOString() ?? null,
     createdAt: record.createdAt.toISOString(),
     updatedAt: record.updatedAt.toISOString(),
+    receipt: receipt ? toReceiptOutput(receipt) : null,
+  };
+}
+
+function toReceiptOutput(receipt: InboxReceiptRecord): InboxReceiptOutput {
+  return {
+    storeId: receipt.storeId,
+    // A deleted store or product leaves the id empty, so the match no longer holds.
+    storeMatch: receipt.storeId ? receipt.storeMatch : "none",
+    storeName: receipt.storeName,
+    storeBranch: receipt.storeBranch,
+    storeNeighborhood: receipt.storeNeighborhood,
+    storeAddress: receipt.storeAddress,
+    paymentMethod: receipt.paymentMethod,
+    itemsAmount: Number(receipt.itemsAmount),
+    totalMismatch: receipt.totalMismatch,
+    warnings: receipt.warnings,
+    hasMedia: receipt.hasMedia,
+    lines: receipt.lines.map((line) => ({
+      id: line.id,
+      position: line.position,
+      extractedName: line.extractedName,
+      productId: line.productId,
+      productMatch: line.productId ? line.productMatch : "none",
+      packageCount: line.packageCount === null ? null : Number(line.packageCount),
+      totalContent: line.totalContent === null ? null : Number(line.totalContent),
+      paidAmount: Number(line.paidAmount),
+      discountAmount: Number(line.discountAmount),
+    })),
   };
 }
 

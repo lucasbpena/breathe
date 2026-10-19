@@ -1,11 +1,13 @@
 import { invoicePaymentCategoryName } from "@openmonetis/domain/categories";
 import { MobileFormState } from "@/components/forms/mobile-form-state";
+import { ProductPurchaseDrafts } from "@/features/product-purchases/components/product-purchase-drafts";
 import { formatInstallmentOption } from "../transactions.presentation";
 import { useTransactionForm } from "../useTransactionForm";
 import { TransactionAdvancedFields } from "./transaction-advanced-fields";
 import { TransactionAmountField } from "./transaction-amount-field";
 import { TransactionBasicFields } from "./transaction-basic-fields";
 import { TransactionBoletoFields } from "./transaction-boleto-fields";
+import { FieldShell } from "./transaction-field-shell";
 import type { TransactionFormProps } from "./transaction-form.types";
 import { TransactionFormActions } from "./transaction-form-actions";
 import { TransactionFormScopeDialogs } from "./transaction-form-scope-dialogs";
@@ -48,6 +50,8 @@ export function TransactionForm({
     updateRecurringRule,
     pendingFiles,
     setPendingFiles,
+    pendingPurchases,
+    setPendingPurchases,
     pendingInstallmentUpdate,
     setPendingInstallmentUpdate,
     pendingRecurringUpdate,
@@ -237,6 +241,23 @@ export function TransactionForm({
                     installmentCount={installmentCount}
                     startInstallment={startInstallment}
                   />
+
+                  {mode !== "edit" &&
+                  values.type === "expense" &&
+                  values.condition !== "recurring" ? (
+                    <FieldShell label="Itens da compra (opcional)">
+                      <ProductPurchaseDrafts
+                        disabled={isSubmitting}
+                        lines={pendingPurchases}
+                        onChange={setPendingPurchases}
+                      />
+                      <p className="text-muted-foreground text-xs">
+                        {values.condition === "installment"
+                          ? "Os itens ficam vinculados à primeira parcela."
+                          : "Os produtos desta nota são salvos junto com a despesa."}
+                      </p>
+                    </FieldShell>
+                  ) : null}
 
                   <TransactionAdvancedFields
                     pendingFiles={pendingFiles}

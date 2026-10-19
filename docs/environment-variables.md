@@ -8,16 +8,16 @@ cp .env.example .env
 ```
 
 Não envie o `.env` ao repositório. Os valores de segredo presentes no exemplo servem somente para
-desenvolvimento. Em produção, use os scripts de instalação. Para configuração manual, gere a senha
-do PostgreSQL com `openssl rand -hex 32` e os demais segredos com `openssl rand -base64 48`.
+desenvolvimento. Para segredos próprios, gere a senha do PostgreSQL com `openssl rand -hex 32` e os
+demais segredos com `openssl rand -base64 48`.
 
 ## Docker Compose
 
 | Variável | Descrição |
 | --- | --- |
 | `OPENMONETIS_PROJECT_NAME` | Nome do projeto Compose e prefixo dos recursos criados. |
-| `OPENMONETIS_VERSION` | Tag das imagens oficiais. Use `latest` ou uma versão publicada, como `0.2.0`. |
-| `APP_PORT` | Porta do host que publica o cliente web. Ao alterá-la, ajuste também as URLs públicas. |
+| `OPENMONETIS_VERSION` | Tag das imagens do OpenMonetis original usadas só pelo `compose.yml` sem o `compose.breathe.yml`, que constrói as imagens localmente. |
+| `APP_PORT` | Porta do cliente web, vinculada somente a `127.0.0.1`. Ao alterá-la, ajuste também as URLs da aplicação. |
 
 ## PostgreSQL
 
@@ -40,15 +40,17 @@ são mais necessárias.
 
 | Variável | Descrição |
 | --- | --- |
-| `OPENMONETIS_URL` | URL pública principal e entrada aceita pelos scripts de instalação. Em edição manual, mantenha as três URLs abaixo alinhadas com ela. |
-| `BETTER_AUTH_URL` | URL pública usada pelos endpoints de autenticação. |
+| `OPENMONETIS_URL` | URL principal da aplicação. Mantenha as três URLs abaixo alinhadas com ela. |
+| `BETTER_AUTH_URL` | URL usada pelos endpoints de autenticação. |
 | `WEB_URL` | Origem do cliente web, usada também por passkeys. |
 | `CORS_ORIGIN` | Origens permitidas pela API, separadas por vírgula quando houver mais de uma. |
 | `BETTER_AUTH_TRUSTED_ORIGINS` | Origens adicionais confiáveis para autenticação, separadas por vírgula. Pode ficar vazia. |
 
-Em produção, use a origem HTTPS final, sem caminho, por exemplo
-`https://financas.exemplo.com`. Como a autenticação passa pelo proxy web, normalmente
-`OPENMONETIS_URL`, `BETTER_AUTH_URL`, `WEB_URL` e `CORS_ORIGIN` têm o mesmo valor.
+O projeto não tem acesso público. Nesta máquina, use `http://localhost:7002` (ou a porta de
+`APP_PORT`) em `OPENMONETIS_URL`, `BETTER_AUTH_URL`, `WEB_URL` e `CORS_ORIGIN`, e deixe
+`BETTER_AUTH_TRUSTED_ORIGINS` vazia. Na VPS, acessada por túnel SSH, use
+`http://vps.localhost:8002` (ver `docs/vps.md`): um host `*.localhost` próprio evita que os cookies
+das duas instalações se misturem. Não aponte essas URLs para um domínio público.
 
 ## Autenticação e integrações entre pessoas
 
@@ -94,6 +96,29 @@ Configure as duas variáveis juntas ou deixe ambas vazias. O callback autorizado
 
 Configure as duas variáveis para habilitar completamente a busca e a exibição de logos. Se não usar
 a integração, deixe ambas vazias.
+
+## Captura pelo WhatsApp
+
+| Variável | Descrição |
+| --- | --- |
+| `SELF_WPP` | Seu número, com DDI e DDD (ex.: `5531999998888`). Só mensagens recebidas dele são lidas e respondidas. |
+| `EVOLUTION_API_URL` | Endereço da sua instância da Evolution API. Prefira HTTPS ou a tailnet. |
+| `EVOLUTION_API_KEY` | Chave da Evolution API (`AUTHENTICATION_API_KEY` da instância). |
+| `EVOLUTION_INSTANCE` | Nome da instância conectada ao número que recebe as fotos. |
+| `WHATSAPP_CAPTURE_USER_EMAIL` | E-mail da conta do Breathe que recebe as capturas. |
+| `WHATSAPP_CAPTURE_CLAUDE_MODEL` | Opcional. Modelo passado ao `claude -p`; vazio usa o padrão do Claude Code. |
+| `WHATSAPP_CAPTURE_POLL_SECONDS` | Intervalo entre as consultas à Evolution API. Padrão: `20`. |
+| `WHATSAPP_CAPTURE_CLAUDE_BIN` | Opcional. Caminho do executável `claude`; padrão: `claude` no `PATH`. |
+| `WHATSAPP_CAPTURE_TIMEOUT_SECONDS` | Opcional. Tempo máximo de cada leitura. Padrão: `180`. |
+
+A captura roda no host, fora do Docker, com `pnpm --filter @openmonetis/api capture:whatsapp`, e
+usa o `claude` já autenticado na máquina. Ela só faz chamadas de saída: consulta as mensagens
+guardadas na Evolution API, baixa as fotos e envia a resposta. Nenhuma porta é aberta e não há
+webhook. O `claude -p` roda sem ferramentas, sem MCP, sem `CLAUDE.md` e sem as variáveis do `.env`.
+O que ele lê só cria rascunhos: despesas na Caixa de entrada e medidas em Físico → Corpo. Perguntas
+recebem uma resposta montada a partir de um recorte somente leitura dos dados do usuário, enviado
+ao Claude junto com a pergunta. Os prompts ficam em `apps/api/prompts/whatsapp-capture.md` e
+`apps/api/prompts/whatsapp-answer.md`.
 
 ## Validando alterações
 

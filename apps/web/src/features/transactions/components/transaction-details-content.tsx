@@ -7,6 +7,7 @@ import {
   Paperclip,
   ReceiptText,
   RefreshCw,
+  ShoppingBasket,
   Users,
 } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
@@ -17,6 +18,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { TransactionAttachments } from "@/features/attachments/components/transaction-attachments";
 import { CategoryIcon } from "@/features/categories/category-icons";
+import { TransactionProductPurchases } from "@/features/product-purchases/components/transaction-product-purchases";
 
 import {
   formatDate,
@@ -253,6 +255,15 @@ export function TransactionDetailsContent({
           <p className="whitespace-pre-wrap wrap-break-word rounded-xl border p-3 text-sm leading-relaxed">
             {detail.note}
           </p>
+        </section>
+      ) : null}
+
+      {detail.type === "expense" && detail.recordId ? (
+        <section aria-labelledby="transaction-details-products" className="grid gap-2">
+          <SectionTitle icon={<ShoppingBasket />} id="transaction-details-products">
+            Itens da compra
+          </SectionTitle>
+          <TransactionProductPurchases transactionId={detail.recordId} />
         </section>
       ) : null}
 

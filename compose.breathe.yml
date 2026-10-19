@@ -1,0 +1,29 @@
+# Breathe: builds the images from this repository instead of pulling the upstream OpenMonetis
+# releases, and keeps the Compose project apart from other OpenMonetis installs on the host.
+# No public access: compose.yml binds the web and PostgreSQL to 127.0.0.1, because signups cannot be
+# disabled. A remote install is reached only through an SSH local forward (docs/vps.md); do not
+# publish these ports or put a public proxy or tunnel in front of them.
+# Usage: docker compose -f compose.yml -f compose.breathe.yml up -d --build
+name: breathe
+
+services:
+  migrator:
+    image: breathe-migrator:local
+    build:
+      context: .
+      target: migrator
+
+  api:
+    image: breathe-api:local
+    build:
+      context: .
+      target: api
+
+  recurring-worker:
+    image: breathe-api:local
+
+  web:
+    image: breathe-web:local
+    build:
+      context: .
+      target: web

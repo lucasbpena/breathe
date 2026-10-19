@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  customType,
   date,
   foreignKey,
   index,
@@ -1860,6 +1861,377 @@ export const noteItems = pgTable(
   ],
 );
 
+export const productContentUnit = pgEnum("product_content_unit", ["gram", "milliliter", "package"]);
+
+export const stores = pgTable(
+  "stores",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    branch: varchar("branch", { length: 80 }),
+    neighborhood: varchar("neighborhood", { length: 120 }),
+    address: varchar("address", { length: 255 }),
+    nameKey: varchar("name_key", { length: 220 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("stores_user_id_name_key_unique").on(table.userId, table.nameKey),
+    uniqueIndex("stores_id_user_id_unique").on(table.id, table.userId),
+    check("stores_name_not_blank_check", sql`btrim(${table.name}) <> ''`),
+  ],
+);
+
+export const products = pgTable(
+  "products",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 120 }).notNull(),
+    nameKey: varchar("name_key", { length: 180 }).notNull(),
+    categoryId: uuid("category_id").references(() => categories.id, { onDelete: "set null" }),
+    contentUnit: productContentUnit("content_unit").notNull().default("package"),
+    packageContent: numeric("package_content", { precision: 12, scale: 3 }),
+    energyKcal: numeric("energy_kcal", { precision: 8, scale: 2 }),
+    proteinGrams: numeric("protein_g", { precision: 8, scale: 2 }),
+    carbohydrateGrams: numeric("carbohydrate_g", { precision: 8, scale: 2 }),
+    addedSugarGrams: numeric("added_sugar_g", { precision: 8, scale: 2 }),
+    fatGrams: numeric("fat_g", { precision: 8, scale: 2 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("products_user_id_name_key_unique").on(table.userId, table.nameKey),
+    uniqueIndex("products_id_user_id_unique").on(table.id, table.userId),
+    index("products_category_id_idx")
+      .on(table.categoryId)
+      .where(sql`${table.categoryId} IS NOT NULL`),
+    check("products_name_not_blank_check", sql`btrim(${table.name}) <> ''`),
+    check(
+      "products_package_content_positive_check",
+      sql`${table.packageContent} IS NULL OR ${table.packageContent} > 0`,
+    ),
+    check(
+      "products_nutrition_nonnegative_check",
+      sql`coalesce(${table.energyKcal}, 0) >= 0 AND coalesce(${table.proteinGrams}, 0) >= 0 AND coalesce(${table.carbohydrateGrams}, 0) >= 0 AND coalesce(${table.addedSugarGrams}, 0) >= 0 AND coalesce(${table.fatGrams}, 0) >= 0`,
+    ),
+  ],
+);
+
+export const productAliases = pgTable(
+  "product_aliases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    productId: uuid("product_id").notNull(),
+    name: varchar("name", { length: 160 }).notNull(),
+    nameKey: varchar("name_key", { length: 220 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("product_aliases_user_id_name_key_unique").on(table.userId, table.nameKey),
+    index("product_aliases_product_id_idx").on(table.productId),
+    foreignKey({
+      name: "product_aliases_product_id_user_id_products_fk",
+      columns: [table.productId, table.userId],
+      foreignColumns: [products.id, products.userId],
+    }).onDelete("cascade"),
+    check("product_aliases_name_not_blank_check", sql`btrim(${table.name}) <> ''`),
+  ],
+);
+
+export const productPurchases = pgTable(
+  "product_purchases",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    transactionId: uuid("transaction_id").notNull(),
+    productId: uuid("product_id").notNull(),
+    storeId: uuid("store_id").notNull(),
+    extractedName: varchar("extracted_name", { length: 160 }),
+    packageCount: numeric("package_count", { precision: 10, scale: 3 }),
+    totalContent: numeric("total_content", { precision: 12, scale: 3 }).notNull(),
+    paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull(),
+    discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("product_purchases_user_id_product_id_idx").on(table.userId, table.productId),
+    index("product_purchases_transaction_id_idx").on(table.transactionId),
+    index("product_purchases_store_id_idx").on(table.storeId),
+    foreignKey({
+      name: "product_purchases_transaction_id_user_id_transactions_fk",
+      columns: [table.transactionId, table.userId],
+      foreignColumns: [transactions.id, transactions.userId],
+    }).onDelete("cascade"),
+    foreignKey({
+      name: "product_purchases_product_id_user_id_products_fk",
+      columns: [table.productId, table.userId],
+      foreignColumns: [products.id, products.userId],
+    }).onDelete("restrict"),
+    foreignKey({
+      name: "product_purchases_store_id_user_id_stores_fk",
+      columns: [table.storeId, table.userId],
+      foreignColumns: [stores.id, stores.userId],
+    }).onDelete("restrict"),
+    check(
+      "product_purchases_extracted_name_not_blank_check",
+      sql`${table.extractedName} IS NULL OR btrim(${table.extractedName}) <> ''`,
+    ),
+    check(
+      "product_purchases_package_count_positive_check",
+      sql`${table.packageCount} IS NULL OR ${table.packageCount} > 0`,
+    ),
+    check("product_purchases_total_content_positive_check", sql`${table.totalContent} > 0`),
+    check("product_purchases_paid_amount_positive_check", sql`${table.paidAmount} > 0`),
+    check("product_purchases_discount_nonnegative_check", sql`${table.discountAmount} >= 0`),
+  ],
+);
+
+export const bodyMeasurementKind = pgEnum("body_measurement_kind", [
+  "weight",
+  "neck",
+  "shoulders",
+  "chest",
+  "waist",
+  "abdomen",
+  "hips",
+  "leftArm",
+  "rightArm",
+  "leftForearm",
+  "rightForearm",
+  "leftThigh",
+  "rightThigh",
+  "leftCalf",
+  "rightCalf",
+]);
+
+export const bodyMeasurements = pgTable(
+  "body_measurements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    kind: bodyMeasurementKind("kind").notNull(),
+    value: numeric("value", { precision: 6, scale: 2 }).notNull(),
+    measuredOn: date("measured_on", { mode: "string" }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("body_measurements_user_id_kind_measured_on_unique").on(
+      table.userId,
+      table.kind,
+      table.measuredOn,
+    ),
+    check("body_measurements_value_positive_check", sql`${table.value} > 0`),
+  ],
+);
+
+const bytea = customType<{ data: Buffer; driverData: Buffer }>({
+  dataType() {
+    return "bytea";
+  },
+});
+
+export const whatsappMessageKind = pgEnum("whatsapp_message_kind", [
+  "image",
+  "text",
+  "unsupported",
+]);
+export const whatsappMessageStatus = pgEnum("whatsapp_message_status", [
+  "pending",
+  "processed",
+  "failed",
+  "ignored",
+]);
+export const receiptMatchSource = pgEnum("receipt_match_source", ["name", "suggestion", "none"]);
+
+/** Messages received from the user's own number through the Evolution API. */
+export const whatsappMessages = pgTable(
+  "whatsapp_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    externalId: varchar("external_id", { length: 128 }).notNull(),
+    senderNumber: varchar("sender_number", { length: 20 }).notNull(),
+    kind: whatsappMessageKind("kind").notNull(),
+    text: text("text"),
+    mediaMimeType: varchar("media_mime_type", { length: 100 }),
+    media: bytea("media"),
+    receivedAt: timestamp("received_at", { withTimezone: true }).notNull(),
+    status: whatsappMessageStatus("status").notNull().default("pending"),
+    attempts: integer("attempts").notNull().default(0),
+    errorCode: varchar("error_code", { length: 64 }),
+    replyExternalId: varchar("reply_external_id", { length: 128 }),
+    processedAt: timestamp("processed_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("whatsapp_messages_user_id_external_id_unique").on(table.userId, table.externalId),
+    index("whatsapp_messages_user_id_status_received_at_idx").on(
+      table.userId,
+      table.status,
+      table.receivedAt,
+    ),
+    check("whatsapp_messages_attempts_nonnegative_check", sql`${table.attempts} >= 0`),
+    check(
+      "whatsapp_messages_text_length_check",
+      sql`${table.text} IS NULL OR char_length(${table.text}) <= 4000`,
+    ),
+    check(
+      "whatsapp_messages_media_size_check",
+      sql`${table.media} IS NULL OR octet_length(${table.media}) <= 10485760`,
+    ),
+  ],
+);
+
+/** Receipt read from a captured message, one per inbox item, kept until the item is reviewed. */
+export const inboxReceipts = pgTable(
+  "inbox_receipts",
+  {
+    inboxItemId: uuid("inbox_item_id")
+      .primaryKey()
+      .references(() => inboxItems.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    whatsappMessageId: uuid("whatsapp_message_id").references(() => whatsappMessages.id, {
+      onDelete: "set null",
+    }),
+    storeId: uuid("store_id").references(() => stores.id, { onDelete: "set null" }),
+    storeMatch: receiptMatchSource("store_match").notNull(),
+    storeName: varchar("store_name", { length: 120 }),
+    storeBranch: varchar("store_branch", { length: 80 }),
+    storeNeighborhood: varchar("store_neighborhood", { length: 120 }),
+    storeAddress: varchar("store_address", { length: 255 }),
+    paymentMethod: paymentMethod("payment_method"),
+    itemsAmount: numeric("items_amount", { precision: 12, scale: 2 }).notNull(),
+    totalMismatch: boolean("total_mismatch").notNull().default(false),
+    warnings: text("warnings").array().notNull().default(sql`'{}'::text[]`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("inbox_receipts_user_id_idx").on(table.userId),
+    index("inbox_receipts_whatsapp_message_id_idx").on(table.whatsappMessageId),
+    check("inbox_receipts_items_amount_nonnegative_check", sql`${table.itemsAmount} >= 0`),
+  ],
+);
+
+/** Measurements read from a WhatsApp message, kept until the user confirms or discards them. */
+export const bodyMeasurementDrafts = pgTable(
+  "body_measurement_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    whatsappMessageId: uuid("whatsapp_message_id").references(() => whatsappMessages.id, {
+      onDelete: "set null",
+    }),
+    measuredOn: date("measured_on", { mode: "string" }).notNull(),
+    warnings: text("warnings").array().notNull().default(sql`'{}'::text[]`),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("body_measurement_drafts_user_id_created_at_idx").on(table.userId, table.createdAt),
+    uniqueIndex("body_measurement_drafts_whatsapp_message_id_unique").on(table.whatsappMessageId),
+  ],
+);
+
+export const bodyMeasurementDraftEntries = pgTable(
+  "body_measurement_draft_entries",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    draftId: uuid("draft_id")
+      .notNull()
+      .references(() => bodyMeasurementDrafts.id, { onDelete: "cascade" }),
+    kind: bodyMeasurementKind("kind").notNull(),
+    value: numeric("value", { precision: 6, scale: 2 }).notNull(),
+  },
+  (table) => [
+    uniqueIndex("body_measurement_draft_entries_draft_id_kind_unique").on(
+      table.draftId,
+      table.kind,
+    ),
+    check("body_measurement_draft_entries_value_positive_check", sql`${table.value} > 0`),
+  ],
+);
+
+export const inboxReceiptLines = pgTable(
+  "inbox_receipt_lines",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    inboxItemId: uuid("inbox_item_id")
+      .notNull()
+      .references(() => inboxReceipts.inboxItemId, { onDelete: "cascade" }),
+    position: integer("position").notNull(),
+    extractedName: varchar("extracted_name", { length: 160 }).notNull(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "set null" }),
+    productMatch: receiptMatchSource("product_match").notNull(),
+    packageCount: numeric("package_count", { precision: 10, scale: 3 }),
+    totalContent: numeric("total_content", { precision: 12, scale: 3 }),
+    paidAmount: numeric("paid_amount", { precision: 12, scale: 2 }).notNull(),
+    discountAmount: numeric("discount_amount", { precision: 12, scale: 2 }).notNull().default("0"),
+  },
+  (table) => [
+    uniqueIndex("inbox_receipt_lines_inbox_item_id_position_unique").on(
+      table.inboxItemId,
+      table.position,
+    ),
+    index("inbox_receipt_lines_product_id_idx").on(table.productId),
+    check(
+      "inbox_receipt_lines_extracted_name_not_blank_check",
+      sql`btrim(${table.extractedName}) <> ''`,
+    ),
+    check(
+      "inbox_receipt_lines_package_count_positive_check",
+      sql`${table.packageCount} IS NULL OR ${table.packageCount} > 0`,
+    ),
+    check(
+      "inbox_receipt_lines_total_content_positive_check",
+      sql`${table.totalContent} IS NULL OR ${table.totalContent} > 0`,
+    ),
+    check("inbox_receipt_lines_paid_amount_positive_check", sql`${table.paidAmount} > 0`),
+    check("inbox_receipt_lines_discount_nonnegative_check", sql`${table.discountAmount} >= 0`),
+  ],
+);
+
 export const userRelations = relations(user, ({ many, one }) => ({
   sessions: many(session),
   authAccounts: many(account),
@@ -2209,6 +2581,37 @@ export const noteItemsRelations = relations(noteItems, ({ one }) => ({
     fields: [noteItems.noteId],
     references: [notes.id],
   }),
+}));
+
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  user: one(user, { fields: [stores.userId], references: [user.id] }),
+  purchases: many(productPurchases),
+}));
+
+export const productsRelations = relations(products, ({ one, many }) => ({
+  user: one(user, { fields: [products.userId], references: [user.id] }),
+  category: one(categories, { fields: [products.categoryId], references: [categories.id] }),
+  aliases: many(productAliases),
+  purchases: many(productPurchases),
+}));
+
+export const productAliasesRelations = relations(productAliases, ({ one }) => ({
+  user: one(user, { fields: [productAliases.userId], references: [user.id] }),
+  product: one(products, { fields: [productAliases.productId], references: [products.id] }),
+}));
+
+export const productPurchasesRelations = relations(productPurchases, ({ one }) => ({
+  user: one(user, { fields: [productPurchases.userId], references: [user.id] }),
+  transaction: one(transactions, {
+    fields: [productPurchases.transactionId],
+    references: [transactions.id],
+  }),
+  product: one(products, { fields: [productPurchases.productId], references: [products.id] }),
+  store: one(stores, { fields: [productPurchases.storeId], references: [stores.id] }),
+}));
+
+export const bodyMeasurementsRelations = relations(bodyMeasurements, ({ one }) => ({
+  user: one(user, { fields: [bodyMeasurements.userId], references: [user.id] }),
 }));
 
 export type Card = typeof cards.$inferSelect;

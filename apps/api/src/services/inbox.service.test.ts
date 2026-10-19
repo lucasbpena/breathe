@@ -56,6 +56,8 @@ function createRepository(overrides: Partial<InboxRepository> = {}): InboxReposi
     transitionForUser: async () => null,
     deleteForUser: async () => false,
     deleteByStatusForUser: async () => 0,
+    listReceiptsForUser: async () => [],
+    findMediaForUser: async () => null,
     ...overrides,
   };
 }
@@ -355,4 +357,68 @@ test("rule filtering excludes a matching rule when an earlier rule filled its on
 
   await service.list({ status: "pending", page: 1, pageSize: 20, ruleId: laterRuleId }, userId);
   assert.deepEqual(matchingIds, []);
+});
+
+test("a WhatsApp capture comes with its receipt, and deleted matches are reported as none", async () => {
+  const service = createInboxService(
+    createRepository({
+      findByIdForUser: async () =>
+        createRecord({ sourceApp: "whatsapp", sourceAppName: "WhatsApp" }),
+      listReceiptsForUser: async (requestedUserId, ids) => {
+        assert.equal(requestedUserId, userId);
+        assert.deepEqual(ids, [inboxId]);
+        return [
+          {
+            inboxItemId: inboxId,
+            storeId: null,
+            storeMatch: "name",
+            storeName: "DMA Distribuidora",
+            storeBranch: "Loja 014",
+            storeNeighborhood: "Vila Paris",
+            storeAddress: null,
+            paymentMethod: "credit_card",
+            itemsAmount: "9.48",
+            totalMismatch: false,
+            warnings: ["Pagamento parcialmente legível"],
+            hasMedia: true,
+            lines: [
+              {
+                id: "00000000-0000-4000-8000-000000000091",
+                position: 0,
+                extractedName: "ENERG MONSTER 473ML",
+                productId: null,
+                productMatch: "suggestion",
+                packageCount: "1.000",
+                totalContent: null,
+                paidAmount: "9.48",
+                discountAmount: "0.00",
+              },
+            ],
+          },
+        ];
+      },
+    }),
+    { now: () => now },
+  );
+
+  const item = await service.get(inboxId, userId);
+  assert.equal(item.receipt?.storeMatch, "none");
+  assert.equal(item.receipt?.paymentMethod, "credit_card");
+  assert.equal(item.receipt?.hasMedia, true);
+  assert.deepEqual(item.receipt?.lines[0], {
+    id: "00000000-0000-4000-8000-000000000091",
+    position: 0,
+    extractedName: "ENERG MONSTER 473ML",
+    productId: null,
+    productMatch: "none",
+    packageCount: 1,
+    totalContent: null,
+    paidAmount: 9.48,
+    discountAmount: 0,
+  });
+});
+
+test("a capture without a stored photo has no media", async () => {
+  const service = createInboxService(createRepository(), { now: () => now });
+  await assert.rejects(service.media(inboxId, userId), { code: "inbox_media_not_found" });
 });

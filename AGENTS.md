@@ -190,26 +190,28 @@ escopo.
   SemVer estável.
 - Todos os `package.json` do workspace, a entrada do changelog e o badge do README usam sempre a
   mesma versão. Validar com `pnpm release:check`.
-- A `main` apenas valida. Imagens e GitHub Releases são publicadas exclusivamente por tags
-  `vX.Y.Z`, conforme `docs/releases.md`.
-- Criar ou enviar uma tag publica artefatos externos e exige um pedido explícito e inequívoco para
-  publicar uma versão. Pedidos para criar commit ou fazer push, isoladamente, não autorizam tag,
-  imagens ou GitHub Release.
-- Nunca mover, apagar ou recriar automaticamente uma tag publicada para contornar uma falha.
+- O projeto não tem acesso público: não há publicação de imagens, GitHub Release, instalador remoto
+  nem deploy acessível pela internet. Ele roda localmente e, separado, na VPS do usuário, acessada
+  só por túnel SSH (`docs/vps.md`). A `main` apenas valida (CI), e as versões seguem
+  `docs/releases.md`.
+- Não reintroduzir exposição externa (proxy público, túnel público, Tailscale Serve/Funnel,
+  workflow de publicação) sem pedido explícito. Web e PostgreSQL ficam vinculados a `127.0.0.1`,
+  inclusive na VPS.
+- Criar ou enviar uma tag exige um pedido explícito e inequívoco. Pedidos para criar commit ou
+  fazer push, isoladamente, não autorizam tag.
+- Nunca mover, apagar ou recriar automaticamente uma tag enviada para contornar uma falha.
 
 ## 16. Playbooks locais do mantenedor
 
-- A mensagem exata e autônoma **"Execute o deploy"** ativa a skill privada
-  `$openmonetis-deploy`, que deve reler e executar integralmente `deploy.md` da raiz do projeto.
 - A mensagem exata e autônoma **"Execute o cleanup"** ativa a skill privada
   `$openmonetis-cleanup` em modo de diagnóstico, sem alterar ou excluir arquivos.
 - A mensagem exata e autônoma **"Execute o cleanup apply"** ativa `$openmonetis-cleanup` em modo de
-  aplicação conservadora. Esse gatilho não autoriza commit, push, tag, release ou deploy.
-- Menções explicativas, condicionais ou entre aspas não acionam nenhum desses fluxos.
+  aplicação conservadora. Esse gatilho não autoriza commit, push ou tag.
+- Menções explicativas, condicionais ou entre aspas não acionam esses fluxos.
 - Se a skill ou seu playbook estiver ausente, vazio ou ilegível, interromper e informar o usuário;
   nunca reconstruir suas instruções por suposição.
-- `deploy.md`, `cleanup.md` e as duas skills são privados do mantenedor, ignorados pelo Git e não
-  fazem parte da documentação pública do OpenMonetis.
+- `cleanup.md` e a skill são privados do mantenedor, ignorados pelo Git e não fazem parte da
+  documentação do projeto.
 
 ## 17. Princípio Final
 

@@ -17,6 +17,7 @@ import {
   type InboxSourceMatch,
 } from "../inbox.presentation";
 import { InboxItemActions } from "./inbox-item-actions";
+import { InboxReceiptSummary } from "./inbox-receipt-summary";
 import { InboxSourceLogo } from "./inbox-source-logo";
 
 export function InboxItemCard({
@@ -77,9 +78,13 @@ export function InboxItemCard({
               ))}
             </div>
           ) : null}
-          <p className="line-clamp-2 wrap-break-word text-muted-foreground text-sm leading-relaxed">
-            {item.originalText}
-          </p>
+          {item.receipt ? (
+            <InboxReceiptSummary item={item} onOpenDetails={onDetails} receipt={item.receipt} />
+          ) : (
+            <p className="line-clamp-2 wrap-break-word text-muted-foreground text-sm leading-relaxed">
+              {item.originalText}
+            </p>
+          )}
         </div>
         <div className="flex min-w-0 flex-wrap items-center gap-2 border-t px-4 py-3">
           {amount ? <p className="mr-auto font-semibold text-base tabular-nums">{amount}</p> : null}
@@ -120,9 +125,13 @@ export function InboxItemCard({
                 ))
               : null}
           </div>
-          <p className="mt-2 line-clamp-2 wrap-break-word text-muted-foreground text-sm leading-relaxed">
-            {item.originalText}
-          </p>
+          {item.receipt ? (
+            <InboxReceiptSummary item={item} onOpenDetails={onDetails} receipt={item.receipt} />
+          ) : (
+            <p className="mt-2 line-clamp-2 wrap-break-word text-muted-foreground text-sm leading-relaxed">
+              {item.originalText}
+            </p>
+          )}
         </div>
         <div className="flex shrink-0 items-center gap-3 self-center">
           {amount ? <p className="font-semibold tabular-nums">{amount}</p> : null}

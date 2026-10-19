@@ -155,3 +155,41 @@ function getInboxDateGroupLabel(dateKey: string, now: Date) {
     year: dateKey.startsWith(currentYear) ? undefined : "numeric",
   });
 }
+
+type InboxReceipt = NonNullable<InboxItemSummaryOutput["receipt"]>;
+
+/** Counts behind the receipt badges: what is ready to save and what still needs a product. */
+export function summarizeInboxReceipt(receipt: InboxReceipt) {
+  const matched = receipt.lines.filter((line) => line.productId !== null).length;
+  return {
+    lineCount: receipt.lines.length,
+    matched,
+    unmatched: receipt.lines.length - matched,
+    newStore: receipt.storeId === null,
+  };
+}
+
+export function formatInboxReceiptLines(receipt: InboxReceipt) {
+  const { lineCount, matched } = summarizeInboxReceipt(receipt);
+  if (lineCount === 0) return "Sem itens";
+  const items = lineCount === 1 ? "1 item" : `${lineCount} itens`;
+  if (matched === lineCount) return `${items}, todos reconhecidos`;
+  if (matched === 0) return `${items}, nenhum reconhecido`;
+  return `${items}, ${matched} reconhecido${matched === 1 ? "" : "s"}`;
+}
+
+export function formatInboxReceiptStore(receipt: InboxReceipt) {
+  const name = [receipt.storeName, receipt.storeBranch].filter(Boolean).join(" ");
+  if (!name) return null;
+  return receipt.storeNeighborhood ? `${name} · ${receipt.storeNeighborhood}` : name;
+}
+
+/** Warnings shown with the capture, including the total check done by the API. */
+export function getInboxReceiptWarnings(receipt: InboxReceipt, amount: number | null) {
+  return [
+    receipt.totalMismatch && amount !== null
+      ? `Os itens somam ${formatInboxAmount(receipt.itemsAmount)}, mas o total da nota é ${formatInboxAmount(amount)}.`
+      : null,
+    ...receipt.warnings,
+  ].filter((warning): warning is string => Boolean(warning));
+}

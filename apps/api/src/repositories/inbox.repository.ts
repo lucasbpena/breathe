@@ -1,4 +1,13 @@
-import { cards, db, financialAccounts, inboxItems, transactions } from "@openmonetis/db";
+import {
+  cards,
+  db,
+  financialAccounts,
+  inboxItems,
+  inboxReceiptLines,
+  inboxReceipts,
+  transactions,
+  whatsappMessages,
+} from "@openmonetis/db";
 import type { InboxItemStatus } from "@openmonetis/domain/inbox";
 import { and, asc, count, desc, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import type { InboxRepository } from "../services/inbox.service";
@@ -199,6 +208,80 @@ export const inboxRepository: InboxRepository = {
       )
       .returning({ id: inboxItems.id });
     return Boolean(deleted);
+  },
+
+  async listReceiptsForUser(userId, inboxItemIds) {
+    if (!inboxItemIds.length) return [];
+    const receipts = await db
+      .select({
+        inboxItemId: inboxReceipts.inboxItemId,
+        storeId: inboxReceipts.storeId,
+        storeMatch: inboxReceipts.storeMatch,
+        storeName: inboxReceipts.storeName,
+        storeBranch: inboxReceipts.storeBranch,
+        storeNeighborhood: inboxReceipts.storeNeighborhood,
+        storeAddress: inboxReceipts.storeAddress,
+        paymentMethod: inboxReceipts.paymentMethod,
+        itemsAmount: inboxReceipts.itemsAmount,
+        totalMismatch: inboxReceipts.totalMismatch,
+        warnings: inboxReceipts.warnings,
+        hasMedia: sql<boolean>`${whatsappMessages.media} IS NOT NULL`,
+      })
+      .from(inboxReceipts)
+      .leftJoin(
+        whatsappMessages,
+        and(
+          eq(whatsappMessages.id, inboxReceipts.whatsappMessageId),
+          eq(whatsappMessages.userId, userId),
+        ),
+      )
+      .where(
+        and(eq(inboxReceipts.userId, userId), inArray(inboxReceipts.inboxItemId, inboxItemIds)),
+      );
+    if (!receipts.length) return [];
+    const lines = await db
+      .select({
+        id: inboxReceiptLines.id,
+        inboxItemId: inboxReceiptLines.inboxItemId,
+        position: inboxReceiptLines.position,
+        extractedName: inboxReceiptLines.extractedName,
+        productId: inboxReceiptLines.productId,
+        productMatch: inboxReceiptLines.productMatch,
+        packageCount: inboxReceiptLines.packageCount,
+        totalContent: inboxReceiptLines.totalContent,
+        paidAmount: inboxReceiptLines.paidAmount,
+        discountAmount: inboxReceiptLines.discountAmount,
+      })
+      .from(inboxReceiptLines)
+      .where(
+        and(
+          eq(inboxReceiptLines.userId, userId),
+          inArray(inboxReceiptLines.inboxItemId, inboxItemIds),
+        ),
+      )
+      .orderBy(asc(inboxReceiptLines.inboxItemId), asc(inboxReceiptLines.position));
+    return receipts.map((receipt) => ({
+      ...receipt,
+      hasMedia: Boolean(receipt.hasMedia),
+      lines: lines.filter((line) => line.inboxItemId === receipt.inboxItemId),
+    }));
+  },
+
+  async findMediaForUser(id, userId) {
+    const [row] = await db
+      .select({ mimeType: whatsappMessages.mediaMimeType, data: whatsappMessages.media })
+      .from(inboxReceipts)
+      .innerJoin(whatsappMessages, eq(whatsappMessages.id, inboxReceipts.whatsappMessageId))
+      .where(
+        and(
+          eq(inboxReceipts.inboxItemId, id),
+          eq(inboxReceipts.userId, userId),
+          eq(whatsappMessages.userId, userId),
+        ),
+      )
+      .limit(1);
+    if (!row?.mimeType || !row.data) return null;
+    return { mimeType: row.mimeType, data: row.data };
   },
 
   async deleteByStatusForUser(status, userId) {
