@@ -54,6 +54,7 @@ const recurringBoleto: DashboardRecurringRuleRecord = {
 const repository: DashboardRepository = {
   deleteWidgetPreferences: async () => undefined,
   findWidgetPreferences: async () => null,
+  listCategoriesForUser: async () => [],
   listAdminInvoicePaymentAllocations: async () => [],
   listInvoiceStatuses: async () => [],
   listRecurringOccurrenceStates: async () => [
@@ -339,6 +340,7 @@ test("invoice reductions preserve the nonnegative unbudgeted spending contract",
     [{ categoryId: null, origin: "invoiceAdjustment", type: "expense", amount: "20.00" }],
     [],
     "2026-09",
+    [],
   );
 
   assert.equal(spending.uncategorizedActualAmount, -20);
@@ -563,5 +565,37 @@ test("dashboard places the new goals widget after budgets in existing custom lay
   assert.equal(
     createDefaultDashboardWidgetPreferences().order.indexOf("goals"),
     dashboardWidgetIds.indexOf("budgets") + 1,
+  );
+});
+
+test("category breakdown rolls subcategories up into their parent", async () => {
+  const parentId = "40000000-0000-4000-8000-000000000004";
+  const subcategoryId = "40000000-0000-4000-8000-000000000044";
+  const bill = { ...boletoRecord(false), period: "2026-09", purchaseDate: "2026-09-02" };
+  const power = {
+    ...bill,
+    id: "60000000-0000-4000-8000-000000000066",
+    adminAmount: "-40.00",
+    amount: "-40.00",
+    categoryId: subcategoryId,
+    categoryIcon: "zap",
+    categoryName: "Energia",
+  };
+  const service = createDashboardService(
+    {
+      ...scenarioRepository(power, bill),
+      listCategoriesForUser: async () => [
+        { id: parentId, name: "Contas", icon: "barcode", parentId: null },
+        { id: subcategoryId, name: "Energia", icon: "zap", parentId },
+      ],
+    },
+    { list: async (_userId, period) => [accountBalance(period, 0)] },
+  );
+
+  const breakdown = await service.getCategoryBreakdown("2026-09", userId);
+
+  assert.deepEqual(
+    breakdown.expenses.map((item) => [item.categoryId, item.categoryName, item.amount, item.count]),
+    [[parentId, "Contas", 140, 2]],
   );
 });

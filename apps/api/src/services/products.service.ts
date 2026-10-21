@@ -25,6 +25,7 @@ export type ProductRecord = {
   categoryId: string | null;
   categoryName: string | null;
   categoryIcon: string | null;
+  categoryTracksNutrition: boolean | null;
   contentUnit: ProductContentUnit;
   packageContent: string | null;
   energyKcal: string | null;
@@ -46,7 +47,7 @@ export type ProductPurchasePriceRecord = Omit<ProductPurchasePrice, "purchaseDat
 type ProductData = {
   name: string;
   nameKey: string;
-  categoryId: string | null;
+  categoryId: string;
   contentUnit: ProductContentUnit;
   packageContent: string | null;
   energyKcal: string | null;
@@ -63,7 +64,7 @@ export type ProductsRepository = {
   findCategoryForUser(
     id: string,
     userId: string,
-  ): Promise<{ type: "income" | "expense"; isSystem: boolean } | null>;
+  ): Promise<{ type: "income" | "expense"; isSystem: boolean; tracksNutrition: boolean } | null>;
   listAliasesForUser(userId: string, productId?: string): Promise<ProductAliasRecord[]>;
   findAliasByNameKeyForUser(nameKey: string, userId: string): Promise<ProductAliasRecord | null>;
   insertAlias(data: {
@@ -124,12 +125,12 @@ export function createProductsService(repository: ProductsRepository) {
     }
   }
 
-  async function assertExpenseCategory(categoryId: string | null | undefined, userId: string) {
-    if (!categoryId) return;
+  async function assertExpenseCategory(categoryId: string, userId: string) {
     const category = await repository.findCategoryForUser(categoryId, userId);
     if (category?.type !== "expense" || category.isSystem) {
       throw notFound("Category not found", "category_not_found");
     }
+    return category;
   }
 
   return {
@@ -160,14 +161,23 @@ export function createProductsService(repository: ProductsRepository) {
       };
     },
     async create(input: CreateProductInput, userId: string) {
-      const data = toProductData(input);
+      const category = await assertExpenseCategory(input.categoryId, userId);
+      const data = toProductData(input, category.tracksNutrition);
       await assertNameAvailable(data.nameKey, userId);
-      await assertExpenseCategory(data.categoryId, userId);
       return output(await repository.insert({ ...data, userId }), userId);
     },
     async update(id: string, userId: string, input: UpdateProductInput) {
       const current = await findProduct(id, userId);
-      const data = toProductData({ ...fromRecord(current), ...input });
+      // Products saved before the category became required get one on their next edit.
+      const categoryId = input.categoryId ?? current.categoryId;
+      if (!categoryId) {
+        throw badRequest("Choose a category for the product", "product_category_required");
+      }
+      const category = await assertExpenseCategory(categoryId, userId);
+      const data = toProductData(
+        { ...fromRecord(current), ...input, categoryId },
+        category.tracksNutrition,
+      );
       if (
         data.contentUnit !== current.contentUnit &&
         (await repository.hasPurchasesForUser(id, userId))
@@ -175,7 +185,6 @@ export function createProductsService(repository: ProductsRepository) {
         throw badRequest("Purchases keep the current content unit", "product_unit_in_use");
       }
       await assertNameAvailable(data.nameKey, userId, id);
-      if (input.categoryId !== undefined) await assertExpenseCategory(input.categoryId, userId);
       const product = await repository.updateForUser(id, userId, data);
       if (!product) throw notFound("Product not found", "product_not_found");
       return output(product, userId);
@@ -256,28 +265,30 @@ export function createProductsService(repository: ProductsRepository) {
   };
 }
 
-function toProductData(input: CreateProductInput): ProductData {
+/** Nutrition is kept only for products whose category tracks it. */
+function toProductData(input: CreateProductInput, tracksNutrition: boolean): ProductData {
+  const nutrient = (value: number | null | undefined) =>
+    tracksNutrition ? toDecimal(value, 2) : null;
   return {
     name: input.name,
     nameKey: createProductNameKey(input.name),
-    categoryId: input.categoryId ?? null,
+    categoryId: input.categoryId,
     contentUnit: input.contentUnit,
     packageContent: toDecimal(
       resolvePackageContent(input.contentUnit, input.packageContent ?? null),
       3,
     ),
-    energyKcal: toDecimal(input.energyKcal, 2),
-    proteinGrams: toDecimal(input.proteinGrams, 2),
-    carbohydrateGrams: toDecimal(input.carbohydrateGrams, 2),
-    addedSugarGrams: toDecimal(input.addedSugarGrams, 2),
-    fatGrams: toDecimal(input.fatGrams, 2),
+    energyKcal: nutrient(input.energyKcal),
+    proteinGrams: nutrient(input.proteinGrams),
+    carbohydrateGrams: nutrient(input.carbohydrateGrams),
+    addedSugarGrams: nutrient(input.addedSugarGrams),
+    fatGrams: nutrient(input.fatGrams),
   };
 }
 
-function fromRecord(product: ProductRecord): CreateProductInput {
+function fromRecord(product: ProductRecord): Omit<CreateProductInput, "categoryId"> {
   return {
     name: product.name,
-    categoryId: product.categoryId,
     contentUnit: product.contentUnit,
     packageContent: toNumber(product.packageContent),
     energyKcal: toNumber(product.energyKcal),
@@ -299,6 +310,7 @@ function toOutput(
     categoryId: product.categoryId,
     categoryName: product.categoryName,
     categoryIcon: product.categoryIcon,
+    categoryTracksNutrition: product.categoryTracksNutrition ?? false,
     contentUnit: product.contentUnit,
     packageContent: toNumber(product.packageContent),
     energyKcal: toNumber(product.energyKcal),

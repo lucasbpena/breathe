@@ -106,6 +106,20 @@
       "when": 1792444997289,
       "tag": "0014_whatsapp_capture",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1792524712515,
+      "tag": "0015_category_subcategories",
+      "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1792537075732,
+      "tag": "0016_category_tracks_nutrition",
+      "breakpoints": true
     }
   ]
 }

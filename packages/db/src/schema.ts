@@ -571,7 +571,9 @@ export const categories = pgTable(
     name: varchar("name", { length: 120 }).notNull(),
     type: categoryType("type").notNull(),
     icon: varchar("icon", { length: 100 }),
+    parentId: uuid("parent_id"),
     isSystem: boolean("is_system").notNull().default(false),
+    tracksNutrition: boolean("tracks_nutrition").notNull().default(false),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at")
       .notNull()
@@ -580,9 +582,23 @@ export const categories = pgTable(
   },
   (table) => [
     index("categories_user_id_type_idx").on(table.userId, table.type),
+    index("categories_parent_id_idx").on(table.parentId).where(sql`${table.parentId} IS NOT NULL`),
     uniqueIndex("categories_user_id_name_type_unique").on(table.userId, table.name, table.type),
     uniqueIndex("categories_id_user_id_unique").on(table.id, table.userId),
+    foreignKey({
+      name: "categories_parent_id_user_id_categories_fk",
+      columns: [table.parentId, table.userId],
+      foreignColumns: [table.id, table.userId],
+    }).onDelete("restrict"),
     check("categories_name_not_blank_check", sql`btrim(${table.name}) <> ''`),
+    check(
+      "categories_parent_not_self_check",
+      sql`${table.parentId} IS NULL OR ${table.parentId} <> ${table.id}`,
+    ),
+    check(
+      "categories_nutrition_expense_check",
+      sql`NOT ${table.tracksNutrition} OR ${table.type} = 'expense'`,
+    ),
   ],
 );
 

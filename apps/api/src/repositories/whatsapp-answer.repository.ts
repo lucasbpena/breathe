@@ -1,6 +1,9 @@
 import { categories, db, productPurchases, products, stores, transactions } from "@openmonetis/db";
 import { and, asc, desc, eq, gte, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 import type { WhatsAppAnswerRepository } from "../services/whatsapp-answer.service";
+
+const parentCategories = alias(categories, "whatsapp_answer_parent_categories");
 
 const purchaseDate = sql<string>`${transactions.purchaseDate}::text`;
 
@@ -13,12 +16,17 @@ export const whatsappAnswerRepository = {
         amount: transactions.amount,
         type: transactions.type,
         category: categories.name,
+        parentCategory: parentCategories.name,
         paymentMethod: transactions.paymentMethod,
       })
       .from(transactions)
       .leftJoin(
         categories,
         and(eq(categories.id, transactions.categoryId), eq(categories.userId, userId)),
+      )
+      .leftJoin(
+        parentCategories,
+        and(eq(parentCategories.id, categories.parentId), eq(parentCategories.userId, userId)),
       )
       .where(
         and(

@@ -1,5 +1,12 @@
-import { budgets, categories, db, recurringTransactionRules, transactions } from "@openmonetis/db";
-import { and, asc, eq, inArray } from "drizzle-orm";
+import {
+  budgets,
+  categories,
+  db,
+  products,
+  recurringTransactionRules,
+  transactions,
+} from "@openmonetis/db";
+import { and, asc, eq, inArray, ne } from "drizzle-orm";
 import type { CategoriesRepository } from "../services/categories.service";
 
 export const categoriesRepository = {
@@ -82,6 +89,45 @@ export const categoriesRepository = {
         .limit(1),
     ]);
     return budgetRows.length > 0 || transactionRows.length > 0 || recurringRows.length > 0;
+  },
+  async hasProductsForUser(id, userId) {
+    const rows = await db
+      .select({ id: products.id })
+      .from(products)
+      .where(and(eq(products.categoryId, id), eq(products.userId, userId)))
+      .limit(1);
+    return rows.length > 0;
+  },
+  async hasSubcategoriesForUser(id, userId) {
+    const rows = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.parentId, id), eq(categories.userId, userId)))
+      .limit(1);
+    return rows.length > 0;
+  },
+  async hasBudgetsForUser(id, userId) {
+    const rows = await db
+      .select({ id: budgets.id })
+      .from(budgets)
+      .where(and(eq(budgets.categoryId, id), eq(budgets.userId, userId)))
+      .limit(1);
+    return rows.length > 0;
+  },
+  async isNameTakenForUser({ name, type, exceptId }, userId) {
+    const rows = await db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(
+        and(
+          eq(categories.userId, userId),
+          eq(categories.name, name),
+          eq(categories.type, type),
+          exceptId ? ne(categories.id, exceptId) : undefined,
+        ),
+      )
+      .limit(1);
+    return rows.length > 0;
   },
 } satisfies CategoriesRepository;
 

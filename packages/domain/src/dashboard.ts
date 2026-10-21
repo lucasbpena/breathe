@@ -1,3 +1,4 @@
+import { type CategoryHierarchyNode, createRootCategoryResolver } from "./categories";
 import {
   calculateExpenseImpact,
   isExpenseReduction,
@@ -560,13 +561,20 @@ export function calculateDashboardExpenseDistribution(
   };
 }
 
+export type DashboardCategoryNode = CategoryHierarchyNode & {
+  name: string;
+  icon: string | null;
+};
+
 export function calculateDashboardCategoryBreakdown(
   entries: DashboardCategoryBreakdownEntry[],
   period: string,
   previousPeriod: string,
+  categories: readonly DashboardCategoryNode[],
 ): DashboardCategoryBreakdown {
-  const income = groupCategoryBreakdown(entries, "income", period, previousPeriod);
-  const expenses = groupCategoryBreakdown(entries, "expense", period, previousPeriod);
+  const rolledUpEntries = rollUpCategoryBreakdownEntries(entries, categories);
+  const income = groupCategoryBreakdown(rolledUpEntries, "income", period, previousPeriod);
+  const expenses = groupCategoryBreakdown(rolledUpEntries, "expense", period, previousPeriod);
 
   return {
     income: income.items,
@@ -651,6 +659,21 @@ export function calculateDashboardPeopleExpenses(
     );
 
   return { items, totalAmount: totalCents / 100 };
+}
+
+function rollUpCategoryBreakdownEntries(
+  entries: DashboardCategoryBreakdownEntry[],
+  categories: readonly DashboardCategoryNode[],
+) {
+  const rootCategoryId = createRootCategoryResolver(categories);
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+
+  return entries.map((entry) => {
+    const root = categoryById.get(rootCategoryId(entry.categoryId));
+    return root
+      ? { ...entry, categoryId: root.id, categoryName: root.name, categoryIcon: root.icon }
+      : entry;
+  });
 }
 
 function groupCategoryBreakdown(

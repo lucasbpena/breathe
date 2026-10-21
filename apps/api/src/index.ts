@@ -182,6 +182,7 @@ const transactionsService = createTransactionsService(
     findSystemCategoryByNameForUser,
     getAccountBalanceSnapshotForUser: accountsService.getBalanceSnapshot,
     listCategoriesByIdsForUser,
+    listCategoriesForUser: categoriesRepository.listByUser,
     listPeopleByIdsForUser,
   },
   attachmentsService,

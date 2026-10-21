@@ -14,6 +14,8 @@ const otherUserId = "00000000-0000-4000-8000-000000000009";
 const expenseCategoryId = "00000000-0000-4000-8000-000000000002";
 const incomeCategoryId = "00000000-0000-4000-8000-000000000003";
 const storeId = "00000000-0000-4000-8000-000000000004";
+const otherExpenseCategoryId = "00000000-0000-4000-8000-000000000005";
+const householdCategoryId = "00000000-0000-4000-8000-000000000006";
 
 function setup() {
   const products: ProductRecord[] = [];
@@ -35,9 +37,17 @@ function setup() {
       return owned(products, owner).find((product) => product.nameKey === nameKey)?.id ?? null;
     },
     async findCategoryForUser(id, owner) {
+      if (owner === otherUserId && id === otherExpenseCategoryId) {
+        return { type: "expense", isSystem: false, tracksNutrition: true };
+      }
       if (owner !== userId) return null;
-      if (id === expenseCategoryId) return { type: "expense", isSystem: false };
-      if (id === incomeCategoryId) return { type: "income", isSystem: false };
+      if (id === expenseCategoryId)
+        return { type: "expense", isSystem: false, tracksNutrition: true };
+      if (id === householdCategoryId) {
+        return { type: "expense", isSystem: false, tracksNutrition: false };
+      }
+      if (id === incomeCategoryId)
+        return { type: "income", isSystem: false, tracksNutrition: false };
       return null;
     },
     async listAliasesForUser(owner, productId) {
@@ -73,6 +83,7 @@ function setup() {
         id: nextId(),
         categoryName: data.categoryId ? "Mercado" : null,
         categoryIcon: null,
+        categoryTracksNutrition: data.categoryId !== householdCategoryId,
         createdAt: new Date("2026-10-18T12:00:00Z"),
         updatedAt: new Date("2026-10-18T12:00:00Z"),
       };
@@ -82,7 +93,9 @@ function setup() {
     async updateForUser(id, owner, data) {
       const product = owned(products, owner).find((item) => item.id === id);
       if (!product) return null;
-      Object.assign(product, data);
+      Object.assign(product, data, {
+        categoryTracksNutrition: data.categoryId !== householdCategoryId,
+      });
       return product;
     },
     async hasPurchasesForUser(id, owner) {
@@ -118,7 +131,7 @@ function setup() {
     });
   }
 
-  return { service: createProductsService(repository), addPurchase };
+  return { service: createProductsService(repository), addPurchase, products };
 }
 
 function hasCode(code: string) {
@@ -127,13 +140,14 @@ function hasCode(code: string) {
 
 const monster = {
   name: "Energético Monster",
+  categoryId: expenseCategoryId,
   contentUnit: "milliliter",
   packageContent: 473,
 } as const;
 
 test("products accept only the user's non-system expense categories", async () => {
   const { service } = setup();
-  const product = await service.create({ ...monster, categoryId: expenseCategoryId }, userId);
+  const product = await service.create(monster, userId);
   assert.equal(product.categoryName, "Mercado");
   assert.equal(product.packageContent, 473);
   await assert.rejects(
@@ -144,16 +158,36 @@ test("products accept only the user's non-system expense categories", async () =
       ),
     hasCode("category_not_found"),
   );
+  await assert.rejects(() => service.create(monster, otherUserId), hasCode("category_not_found"));
+});
+
+test("products saved without a category get one on their next edit", async () => {
+  const { service, products } = setup();
+  const product = await service.create(monster, userId);
+  const legacy = products.find((item) => item.id === product.id);
+  assert.ok(legacy);
+  legacy.categoryId = null;
   await assert.rejects(
-    () => service.create({ ...monster, categoryId: expenseCategoryId }, otherUserId),
-    hasCode("category_not_found"),
+    () => service.update(product.id, userId, { packageContent: 350 }),
+    hasCode("product_category_required"),
   );
+  const updated = await service.update(product.id, userId, {
+    packageContent: 350,
+    categoryId: expenseCategoryId,
+  });
+  assert.equal(updated.categoryId, expenseCategoryId);
+  assert.equal(updated.packageContent, 350);
 });
 
 test("products without metragem drop the package metragem", async () => {
   const { service } = setup();
   const bread = await service.create(
-    { name: "Pão de hambúrguer", contentUnit: "package", packageContent: 6 },
+    {
+      name: "Pão de hambúrguer",
+      categoryId: expenseCategoryId,
+      contentUnit: "package",
+      packageContent: 6,
+    },
     userId,
   );
   assert.equal(bread.packageContent, null);
@@ -164,15 +198,26 @@ test("names and aliases share one namespace per user", async () => {
   const product = await service.create(monster, userId);
   await service.addAlias(product.id, { name: "Monster Tradicional 473 ml" }, userId);
   await assert.rejects(
-    () => service.create({ name: "monster tradicional 473 ML", contentUnit: "package" }, userId),
+    () =>
+      service.create(
+        {
+          name: "monster tradicional 473 ML",
+          categoryId: expenseCategoryId,
+          contentUnit: "package",
+        },
+        userId,
+      ),
     hasCode("product_already_exists"),
   );
-  const other = await service.create({ name: "Brahma 473 ml", contentUnit: "milliliter" }, userId);
+  const other = await service.create(
+    { name: "Brahma 473 ml", categoryId: expenseCategoryId, contentUnit: "milliliter" },
+    userId,
+  );
   await assert.rejects(
     () => service.addAlias(other.id, { name: "MONSTER TRADICIONAL 473 ML" }, userId),
     hasCode("alias_conflict"),
   );
-  await service.create(monster, otherUserId);
+  await service.create({ ...monster, categoryId: otherExpenseCategoryId }, otherUserId);
 });
 
 test("receipt names resolve through aliases first and product names next", async () => {
@@ -207,16 +252,16 @@ test("products with purchases cannot be deleted and carry their price summary", 
 test("merging moves purchases and keeps the source name as an alias", async () => {
   const { service, addPurchase } = setup();
   const target = await service.create(monster, userId);
-  const source = await service.create(
-    { name: "Monster 473ml", contentUnit: "milliliter", packageContent: 473 },
-    userId,
-  );
+  const source = await service.create({ ...monster, name: "Monster 473ml" }, userId);
   addPurchase(source.id, "2026-10-11", "9.48");
   await assert.rejects(
     () => service.merge(target.id, { sourceProductId: target.id }, userId),
     hasCode("product_merge_same"),
   );
-  const bulk = await service.create({ name: "Batata inglesa", contentUnit: "gram" }, userId);
+  const bulk = await service.create(
+    { name: "Batata inglesa", categoryId: expenseCategoryId, contentUnit: "gram" },
+    userId,
+  );
   await assert.rejects(
     () => service.merge(target.id, { sourceProductId: bulk.id }, userId),
     hasCode("product_merge_unit_mismatch"),
@@ -247,4 +292,29 @@ test("price history names the stores of each point", async () => {
     history.stores.map((store) => [store.storeName, store.storeBranch, store.averagePrice]),
     [["DMA", "Loja 003", 20.04]],
   );
+});
+
+test("nutrition is kept only for products whose category tracks it", async () => {
+  const { service } = setup();
+  const drink = await service.create({ ...monster, energyKcal: 47, proteinGrams: 0 }, userId);
+  assert.equal(drink.categoryTracksNutrition, true);
+  assert.equal(drink.energyKcal, 47);
+  assert.equal(drink.proteinGrams, 0);
+
+  const detergent = await service.create(
+    {
+      name: "Detergente",
+      categoryId: householdCategoryId,
+      contentUnit: "milliliter",
+      energyKcal: 10,
+    },
+    userId,
+  );
+  assert.equal(detergent.categoryTracksNutrition, false);
+  assert.equal(detergent.energyKcal, null);
+
+  const moved = await service.update(drink.id, userId, { categoryId: householdCategoryId });
+  assert.equal(moved.categoryTracksNutrition, false);
+  assert.equal(moved.energyKcal, null);
+  assert.equal(moved.proteinGrams, null);
 });

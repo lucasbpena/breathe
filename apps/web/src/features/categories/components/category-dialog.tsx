@@ -9,12 +9,14 @@ import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/di
 import { CategoryForm } from "./category-form";
 export function CategoryDialog({
   category,
+  defaultParent,
   defaultType,
   onOpenChange,
   onSubmit,
   open,
 }: {
   category: CategoryOutput | null;
+  defaultParent?: CategoryOutput | null;
   defaultType?: CreateCategoryInput["type"];
   onOpenChange: (open: boolean) => void;
   onSubmit: (input: CreateCategoryInput | ReplaceCategoryInput) => Promise<void>;
@@ -24,17 +26,26 @@ export function CategoryDialog({
     <Dialog onOpenChange={onOpenChange} open={open}>
       <DialogContent guarded>
         <DialogHeader>
-          <DialogTitle>{category ? "Atualizar categoria" : "Nova categoria"}</DialogTitle>
+          <DialogTitle>
+            {category
+              ? "Atualizar categoria"
+              : defaultParent
+                ? "Nova subcategoria"
+                : "Nova categoria"}
+          </DialogTitle>
           <DialogDescription>
             {category
               ? "Atualize os detalhes da categoria."
-              : "Crie uma categoria para organizar seus lançamentos."}
+              : defaultParent
+                ? `Detalhe os lançamentos de ${defaultParent.name} em mais um nível.`
+                : "Crie uma categoria para organizar seus lançamentos."}
           </DialogDescription>
         </DialogHeader>
         <CategoryForm
-          key={category?.id ?? "new-category"}
+          key={category?.id ?? defaultParent?.id ?? "new-category"}
           category={category}
-          defaultType={defaultType}
+          defaultParentId={defaultParent?.id}
+          defaultType={defaultParent?.type ?? defaultType}
           onCancel={() => onOpenChange(false)}
           onSubmit={onSubmit}
         />

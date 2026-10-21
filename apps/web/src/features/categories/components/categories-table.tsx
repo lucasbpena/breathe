@@ -1,6 +1,14 @@
 import type { CategoryOutput } from "@openmonetis/validators/categories";
 import { Link } from "@tanstack/react-router";
-import { ChevronRight, LockKeyhole, Pencil, Trash2 } from "lucide-react";
+import {
+  Apple,
+  ChevronRight,
+  CornerDownRight,
+  ListPlus,
+  LockKeyhole,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 import {
   AlertDialog,
@@ -22,15 +30,19 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import type { CategoryTreeItem } from "../categories.presentation";
 import { CategoryIcon } from "../category-icons";
 
 export function CategoriesTable({
   categories,
+  onAddSubcategory,
   onEdit,
   onRemove,
   pendingId,
 }: {
-  categories: CategoryOutput[];
+  categories: CategoryTreeItem[];
+  onAddSubcategory: (parent: CategoryOutput) => void;
   onEdit: (category: CategoryOutput) => void;
   onRemove: (category: CategoryOutput) => Promise<void>;
   pendingId?: string | null;
@@ -39,17 +51,29 @@ export function CategoriesTable({
     <>
       <ul className="divide-y sm:hidden">
         {categories.map((category) => (
-          <li className="flex min-w-0 items-center gap-3 py-2.5" key={category.id}>
+          <li
+            className={cn("flex min-w-0 items-center gap-3 py-2.5", category.parentId && "pl-4")}
+            key={category.id}
+          >
+            {category.parentId ? (
+              <CornerDownRight
+                aria-hidden="true"
+                className="size-4 shrink-0 text-muted-foreground"
+              />
+            ) : null}
             <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
               <CategoryIcon className="size-4" name={category.icon} />
             </span>
-            <Link
-              className="min-w-0 flex-1 truncate font-medium"
-              params={{ categoryId: category.id }}
-              to="/categories/$categoryId"
-            >
-              {category.name}
-            </Link>
+            <span className="flex min-w-0 flex-1 items-center gap-1.5">
+              <Link
+                className="min-w-0 truncate font-medium"
+                params={{ categoryId: category.id }}
+                to="/categories/$categoryId"
+              >
+                {category.name}
+              </Link>
+              {category.tracksNutrition ? <NutritionMark /> : null}
+            </span>
             {category.isSystem ? (
               <Tooltip>
                 <TooltipTrigger
@@ -71,6 +95,16 @@ export function CategoriesTable({
               </Tooltip>
             ) : (
               <div className="flex shrink-0 items-center gap-1">
+                {category.parentId ? null : (
+                  <Button
+                    aria-label={`Nova subcategoria em ${category.name}`}
+                    onClick={() => onAddSubcategory(category)}
+                    size="icon-sm"
+                    variant="ghost"
+                  >
+                    <ListPlus aria-hidden="true" />
+                  </Button>
+                )}
                 <Button
                   aria-label={`Editar ${category.name}`}
                   onClick={() => onEdit(category)}
@@ -104,8 +138,16 @@ export function CategoriesTable({
             {categories.map((category) => (
               <TableRow key={category.id}>
                 <TableCell>
-                  <span className="grid size-9 place-items-center rounded-full bg-muted text-muted-foreground">
-                    <CategoryIcon className="size-4" name={category.icon} />
+                  <span className={cn("flex items-center gap-2", category.parentId && "pl-4")}>
+                    {category.parentId ? (
+                      <CornerDownRight
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-muted-foreground"
+                      />
+                    ) : null}
+                    <span className="grid size-9 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
+                      <CategoryIcon className="size-4" name={category.icon} />
+                    </span>
                   </span>
                 </TableCell>
                 <TableCell>
@@ -117,6 +159,11 @@ export function CategoriesTable({
                     {category.name}
                     <ChevronRight className="size-3 text-muted-foreground" />
                   </Link>
+                  {category.tracksNutrition ? (
+                    <span className="ml-2 align-middle">
+                      <NutritionMark />
+                    </span>
+                  ) : null}
                 </TableCell>
                 <TableCell>
                   <div className="flex justify-end gap-1">
@@ -141,6 +188,23 @@ export function CategoriesTable({
                       </Tooltip>
                     ) : (
                       <>
+                        {category.parentId ? null : (
+                          <Tooltip>
+                            <TooltipTrigger
+                              render={
+                                <Button
+                                  aria-label={`Nova subcategoria em ${category.name}`}
+                                  onClick={() => onAddSubcategory(category)}
+                                  size="icon"
+                                  variant="ghost"
+                                />
+                              }
+                            >
+                              <ListPlus className="size-4" />
+                            </TooltipTrigger>
+                            <TooltipContent>Nova subcategoria</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Button
                           aria-label={`Editar ${category.name}`}
                           onClick={() => onEdit(category)}
@@ -164,6 +228,17 @@ export function CategoriesTable({
         </Table>
       </div>
     </>
+  );
+}
+function NutritionMark() {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center text-muted-foreground"
+      title="Tem informação nutricional"
+    >
+      <Apple aria-hidden="true" className="size-3.5" />
+      <span className="sr-only">Tem informação nutricional</span>
+    </span>
   );
 }
 function RemoveAction({
@@ -192,8 +267,9 @@ function RemoveAction({
           <AlertDialogTitle>Remover categoria?</AlertDialogTitle>
           <AlertDialogDescription>
             A categoria &quot;{category.name}&quot; será removida. Se ela estiver vinculada a
-            lançamentos ou recorrências, altere a categoria desses registros antes de excluir.
-            Orçamentos vinculados também precisam ser removidos primeiro.
+            lançamentos, recorrências ou produtos, altere a categoria desses registros antes de
+            excluir. Orçamentos vinculados também precisam ser removidos primeiro, e subcategorias
+            precisam ser movidas ou removidas.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

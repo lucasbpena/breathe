@@ -917,3 +917,66 @@ test("settlement preserves the chosen boleto payment date and rejects future dat
   );
   assert.equal(paymentDates.length, 2);
 });
+
+test("filtering by a parent category includes its subcategories", async () => {
+  const parentId = "60000000-0000-4000-8000-000000000006";
+  const subcategoryId = "60000000-0000-4000-8000-000000000066";
+  const subcategoryTransaction = transactionFixture({
+    id: "20000000-0000-4000-8000-000000000022",
+    categoryId: subcategoryId,
+    categoryName: "Aluguel",
+  });
+  const requestedCategoryIds: string[][] = [];
+  const dependencies = new Proxy(
+    {
+      listCategoriesForUser: async () => [
+        { id: parentId, parentId: null },
+        { id: subcategoryId, parentId },
+        { id: "60000000-0000-4000-8000-000000000067", parentId: null },
+      ],
+      listTransactionsByPeriod: async (
+        _userId: string,
+        _period: string,
+        filters: { categoryIds: string[] },
+      ) => {
+        requestedCategoryIds.push(filters.categoryIds);
+        return [transactionFixture(), subcategoryTransaction];
+      },
+      listRecurringRulesForPeriod: async () => [],
+      listRecurringSplitsForUser: async () => [],
+      listRecurringOccurrencesForUser: async () => [],
+      listTransactionSplitsForUser: async () => [],
+      listTransactionIdsWithAttachmentsForUser: async () => [],
+    },
+    {
+      get(target, property) {
+        if (property in target) return target[property as keyof typeof target];
+        return async () => {
+          throw new Error(`Unexpected dependency call: ${String(property)}`);
+        };
+      },
+    },
+  ) as unknown as TransactionsServiceDependencies;
+  const service = createTransactionsService(dependencies, {
+    async cleanupOrphans() {
+      return { deletedCount: 0 };
+    },
+  });
+
+  const byParent = await service.listTransactions(
+    userId,
+    ListTransactionsQuerySchema.parse({ period: "2026-09", categoryIds: parentId }),
+  );
+  const bySubcategory = await service.listTransactions(
+    userId,
+    ListTransactionsQuerySchema.parse({ period: "2026-09", categoryIds: subcategoryId }),
+  );
+
+  assert.deepEqual(requestedCategoryIds[0]?.sort(), [parentId, subcategoryId].sort());
+  assert.equal(byParent.total, 2);
+  assert.deepEqual(requestedCategoryIds[1], [subcategoryId]);
+  assert.deepEqual(
+    bySubcategory.items.map((item) => item.categoryId),
+    [subcategoryId],
+  );
+});

@@ -49,6 +49,7 @@ function setup(answer: unknown = { answer: "Você gastou *R$ 29,46*." }) {
           amount: "-53.34",
           type: "expense",
           category: "Mercado",
+          parentCategory: "Alimentação",
           paymentMethod: "credit_card",
         },
       ];
@@ -114,6 +115,8 @@ test("questions are answered from the user's recent data, read only", async () =
   assert.match(request, /<pergunta>\nQuanto gastei com Monster em outubro\?\n<\/pergunta>$/);
   const data = JSON.parse(request.split("\n")[2] ?? "{}");
   assert.equal(data.transactions[0].amount, -53.34);
+  assert.equal(data.transactions[0].category, "Alimentação › Mercado");
+  assert.equal("parentCategory" in data.transactions[0], false);
   assert.deepEqual(data.purchases[0], {
     date: "2026-10-11",
     product: "Monster Tradicional 473 mL",

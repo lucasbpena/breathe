@@ -1,5 +1,3 @@
-import type { CategoryOutput } from "@openmonetis/validators/categories";
-
 import { Plus } from "lucide-react";
 import type { ReactNode } from "react";
 import { MobileDatePicker as DatePicker } from "@/components/forms/mobile-date-picker";
@@ -7,6 +5,10 @@ import { MobileRecordSelect } from "@/components/forms/mobile-record-select";
 import { MobileSelect as Select } from "@/components/forms/mobile-select";
 import { MobileSelectContent as SelectContent } from "@/components/forms/mobile-select-content";
 import { SelectItem, SelectSeparator, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  type CategoryTreeItem,
+  formatCategoryPath,
+} from "@/features/categories/categories.presentation";
 import { cn } from "@/lib/utils";
 import { getTransactionDateLabel, transactionTypeLabels } from "../transactions.presentation";
 import type { useTransactionForm } from "../useTransactionForm";
@@ -48,7 +50,7 @@ export function TransactionBasicFields({
   isSubmitting: boolean;
   isTransfer: boolean;
   isSeriesEdit: boolean;
-  visibleCategories: CategoryOutput[];
+  visibleCategories: CategoryTreeItem[];
   amountField: ReactNode;
 }) {
   return (
@@ -153,7 +155,7 @@ export function TransactionBasicFields({
                       { value: noneValue, label: "Sem categoria" },
                       ...visibleCategories.map((item) => ({
                         value: item.id,
-                        label: item.name,
+                        label: formatCategoryPath(item),
                         content: <CategoryOption category={item} />,
                       })),
                     ]}

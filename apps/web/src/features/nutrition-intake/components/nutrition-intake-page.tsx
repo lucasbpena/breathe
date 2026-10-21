@@ -93,10 +93,11 @@ export function NutritionIntakePage() {
                 <span className="mx-auto grid size-11 place-items-center rounded-full bg-muted text-muted-foreground">
                   <Salad aria-hidden="true" className="size-5" />
                 </span>
-                <p className="mt-4 font-medium">Nenhum item de compra no período</p>
+                <p className="mt-4 font-medium">Nenhum alimento comprado no período</p>
                 <p className="mt-1 text-muted-foreground text-sm">
-                  A estimativa vem dos itens das despesas. Detalhe as notas fiscais em itens e
-                  cadastre a informação nutricional dos produtos.
+                  A estimativa vem dos itens das despesas cujos produtos são de categorias com
+                  informação nutricional. Detalhe as notas fiscais em itens e ative a opção nessas
+                  categorias.
                 </p>
               </div>
             </Card>

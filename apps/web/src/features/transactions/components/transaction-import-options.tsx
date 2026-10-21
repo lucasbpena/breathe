@@ -10,6 +10,7 @@ import type { ReactNode } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 import { CategoryIcon } from "@/features/categories/category-icons";
+import { CategoryPathLabel } from "@/features/categories/components/category-path-label";
 import { cn } from "@/lib/utils";
 
 export function Field({ label, children }: { label: string; children: ReactNode }) {
@@ -86,7 +87,7 @@ export function CategoryOption({
   compact = false,
   description,
 }: {
-  category?: CategoryOutput;
+  category?: CategoryOutput & { parentName?: string | null };
   compact?: boolean;
   description?: string;
 }) {
@@ -102,7 +103,9 @@ export function CategoryOption({
         <CategoryIcon className={compact ? "size-3.5" : "size-4"} name={category.icon} />
       </span>
       <span className="grid min-w-0 text-left">
-        <span className="truncate font-medium text-sm">{category.name}</span>
+        <span className="truncate font-medium text-sm">
+          <CategoryPathLabel category={category} />
+        </span>
         {!compact && description ? (
           <span className="text-muted-foreground text-xs">{description}</span>
         ) : null}

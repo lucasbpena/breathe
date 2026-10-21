@@ -21,9 +21,13 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Captura pelo WhatsApp: fotos de notas fiscais (inclusive várias notas na mesma foto) e mensagens de texto enviadas do seu número para a instância da Evolution API são lidas com `claude -p`, respondidas no WhatsApp com os campos entendidos e guardadas na Caixa de entrada, com foto, loja, forma de pagamento e itens já associados aos produtos conhecidos. Itens sem produto ou loja precisam ser associados ou removidos antes de confirmar.
 - Peso e medidas pelo WhatsApp: mensagens como "peso 82,4, cintura 84" ficam pendentes em Físico → Corpo, com o valor que cada medida substitui, para confirmar, editar ou descartar.
 - Perguntas pelo WhatsApp: perguntas sobre gastos, compras, medidas e nutrição são respondidas na conversa a partir de um recorte somente leitura dos seus dados, sem gravar nada.
+- Subcategorias: uma categoria pode ter subcategorias (um nível, mesmo tipo da categoria pai), usadas em lançamentos, produtos, regras da Caixa de entrada e importação como qualquer categoria. Visão geral, Evolução por categoria e Orçamentos somam as subcategorias na categoria pai; filtrar lançamentos pela categoria pai inclui as subcategorias; a página da categoria mostra o valor de cada subcategoria no mês. Orçamentos continuam valendo só para categorias principais.
 
 ### Alterado
 
+- Categorias de despesa ganham a opção "Tem informação nutricional" (ligada em Alimentação, Mercado, Restaurantes e Delivery, e nas categorias que já tinham produtos com informação nutricional). Só produtos dessas categorias mostram calorias e macros e entram em Físico → Nutrição; uma subcategoria nova herda a escolha da categoria pai.
+- Produtos: a categoria (ou subcategoria) de despesa passa a ser obrigatória no cadastro. Produtos já cadastrados sem categoria pedem uma na próxima edição, e uma categoria usada por produtos não pode ser excluída nem mudar de tipo.
+- Criar ou renomear uma categoria com um nome que já existe para o mesmo tipo mostra um aviso claro em vez de um erro genérico.
 - O projeto deixa de ter acesso público: o web também fica vinculado a `127.0.0.1` no `compose.yml`, e o acesso remoto passa a ser só por túnel SSH.
 
 ### Removido

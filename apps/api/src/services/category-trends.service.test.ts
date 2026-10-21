@@ -53,9 +53,16 @@ test("invoice reductions lower expense trends without becoming income", async ()
   const service = createCategoryTrendsService({
     async listCategoriesForUser() {
       return [
-        { categoryId: purchaseCategoryId, name: "Compras", icon: null, type: "expense" },
+        {
+          categoryId: purchaseCategoryId,
+          parentId: null,
+          name: "Compras",
+          icon: null,
+          type: "expense",
+        },
         {
           categoryId: adjustmentCategoryId,
+          parentId: null,
           name: "Ajustes de fatura",
           icon: null,
           type: "expense",
@@ -98,4 +105,77 @@ test("invoice reductions lower expense trends without becoming income", async ()
     report.categories.find((category) => category.categoryId === adjustmentCategoryId)?.totalAmount,
     -20,
   );
+});
+
+test("trends roll subcategories into the parent or keep them separate on request", async () => {
+  const foodId = "10000000-0000-4000-8000-000000000011";
+  const groceriesId = "10000000-0000-4000-8000-000000000012";
+  const requestedCategoryIds: Array<readonly string[]> = [];
+  const service = createCategoryTrendsService({
+    async listCategoriesForUser() {
+      return [
+        { categoryId: foodId, parentId: null, name: "Alimentação", icon: null, type: "expense" },
+        { categoryId: groceriesId, parentId: foodId, name: "Mercado", icon: null, type: "expense" },
+      ];
+    },
+    async listActualEntriesForUser(_userId, _start, _end, categoryIds) {
+      requestedCategoryIds.push(categoryIds);
+      return [
+        {
+          categoryId: foodId,
+          origin: "regular" as const,
+          transactionType: "expense" as const,
+          type: "expense" as const,
+          period: "2026-09",
+          amount: "-30.00",
+        },
+        {
+          categoryId: groceriesId,
+          origin: "regular" as const,
+          transactionType: "expense" as const,
+          type: "expense" as const,
+          period: "2026-09",
+          amount: "-50.00",
+        },
+      ];
+    },
+    async listRecurringRulesForUser() {
+      return [];
+    },
+  });
+
+  const rolledUp = await service.list(
+    "owner",
+    ListCategoryTrendsQuerySchema.parse({
+      startPeriod: "2026-09",
+      endPeriod: "2026-09",
+      categoryIds: foodId,
+    }),
+  );
+  const separate = await service.list(
+    "owner",
+    ListCategoryTrendsQuerySchema.parse({
+      startPeriod: "2026-09",
+      endPeriod: "2026-09",
+      subcategoryMode: "separate",
+    }),
+  );
+
+  assert.deepEqual([...(requestedCategoryIds[0] ?? [])].sort(), [foodId, groceriesId].sort());
+  assert.deepEqual(
+    rolledUp.categories.map((category) => [category.categoryId, category.totalAmount]),
+    [[foodId, 80]],
+  );
+  assert.deepEqual(
+    rolledUp.availableCategories.map((category) => category.categoryId),
+    [foodId],
+  );
+  assert.deepEqual(
+    separate.categories.map((category) => [category.categoryId, category.totalAmount]),
+    [
+      [groceriesId, 50],
+      [foodId, 30],
+    ],
+  );
+  assert.equal(separate.summary.expenseAmount, 80);
 });

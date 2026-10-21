@@ -1,4 +1,3 @@
-import type { ListCategoryTrendsQuery } from "@openmonetis/validators/category-trends";
 import { useQuery } from "@tanstack/react-query";
 import { Download, FileChartColumn, LineChart, RefreshCw, Table2, Tags } from "lucide-react";
 import { ProtectedRoute } from "@/components/auth/protected-route";
@@ -8,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import type { CategoryTrendsRequest } from "../category-trends.api";
 import { useExportCategoryTrendsMutation } from "../category-trends.mutations";
 import { categoryTrendsQueryOptions } from "../category-trends.queries";
 import { CategoryTrendsChart } from "./category-trends-chart";
@@ -15,8 +15,8 @@ import { CategoryTrendsFilters } from "./category-trends-filters";
 import { CategoryTrendsList } from "./category-trends-list";
 
 type CategoryTrendsPageProps = {
-  filters: ListCategoryTrendsQuery;
-  onFiltersChange: (filters: ListCategoryTrendsQuery) => void;
+  filters: CategoryTrendsRequest;
+  onFiltersChange: (filters: CategoryTrendsRequest) => void;
 };
 
 export function CategoryTrendsPage({ filters, onFiltersChange }: CategoryTrendsPageProps) {

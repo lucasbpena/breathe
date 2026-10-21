@@ -18,6 +18,7 @@ const productColumns = {
   categoryId: products.categoryId,
   categoryName: categories.name,
   categoryIcon: categories.icon,
+  categoryTracksNutrition: categories.tracksNutrition,
   contentUnit: products.contentUnit,
   packageContent: products.packageContent,
   energyKcal: products.energyKcal,
@@ -67,7 +68,11 @@ export const productsRepository = {
   },
   async findCategoryForUser(id, userId) {
     const [category] = await db
-      .select({ type: categories.type, isSystem: categories.isSystem })
+      .select({
+        type: categories.type,
+        isSystem: categories.isSystem,
+        tracksNutrition: categories.tracksNutrition,
+      })
       .from(categories)
       .where(and(eq(categories.id, id), eq(categories.userId, userId)))
       .limit(1);

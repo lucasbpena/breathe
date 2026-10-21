@@ -54,7 +54,7 @@ export function BudgetsPage({ onPeriodChange, period }: BudgetsPageProps) {
   );
   const budgetedCategoryIds = new Set(overview?.items.map((budget) => budget.categoryId));
   const availableCategories = expenseCategories.filter(
-    (category) => !budgetedCategoryIds.has(category.id),
+    (category) => category.parentId === null && !budgetedCategoryIds.has(category.id),
   );
   const categorySlugs = buildFilterSlugMap(categoriesQuery.data ?? []);
   const loading = budgetsQuery.isLoading || categoriesQuery.isLoading;

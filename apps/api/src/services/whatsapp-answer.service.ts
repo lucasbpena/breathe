@@ -24,6 +24,7 @@ export type WhatsAppAnswerRepository = {
       amount: string;
       type: string;
       category: string | null;
+      parentCategory: string | null;
       paymentMethod: string | null;
     }[]
   >;
@@ -98,7 +99,11 @@ export function createWhatsAppAnswerService(
         purchasesSince: shiftDate(today, -purchaseDays),
         nutrition: "estimated from purchased items, each counted on its purchase day",
       },
-      transactions: transactions.map((row) => ({ ...row, amount: Number(row.amount) })),
+      transactions: transactions.map(({ parentCategory, ...row }) => ({
+        ...row,
+        category: parentCategory ? `${parentCategory} › ${row.category}` : row.category,
+        amount: Number(row.amount),
+      })),
       purchases: purchases.map((row) => ({
         date: row.date,
         product: row.product,

@@ -1,5 +1,6 @@
 import { invoicePaymentCategoryName } from "@openmonetis/domain/categories";
 import { MobileFormState } from "@/components/forms/mobile-form-state";
+import { buildCategoryTree } from "@/features/categories/categories.presentation";
 import { ProductPurchaseDrafts } from "@/features/product-purchases/components/product-purchase-drafts";
 import { formatInstallmentOption } from "../transactions.presentation";
 import { useTransactionForm } from "../useTransactionForm";
@@ -135,9 +136,11 @@ export function TransactionForm({
             const isBoleto = values.paymentMethod === "boleto";
             const showBoletoPaymentDate =
               values.condition !== "recurring" && values.isSettled === "true";
-            const visibleCategories = categories.filter(
-              (category) =>
-                category.type === values.type && category.name !== invoicePaymentCategoryName,
+            const visibleCategories = buildCategoryTree(
+              categories.filter(
+                (category) =>
+                  category.type === values.type && category.name !== invoicePaymentCategoryName,
+              ),
             );
             const installmentAmount = Number(values.amount);
             const installmentCount = Number(values.installmentCount);

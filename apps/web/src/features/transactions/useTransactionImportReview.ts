@@ -6,6 +6,7 @@ import {
 import { useForm } from "@tanstack/react-form";
 
 import { useRef, useState } from "react";
+import { buildCategoryTree } from "@/features/categories/categories.presentation";
 import {
   currentPeriod,
   findCategoryByImportedName,
@@ -32,8 +33,8 @@ export function useTransactionImportReview({
   const [rows, setRows] = useState<ReviewRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
-  const selectableCategories = categories.filter(
-    (category) => category.name !== invoicePaymentCategoryName,
+  const selectableCategories = buildCategoryTree(
+    categories.filter((category) => category.name !== invoicePaymentCategoryName),
   );
   const form = useForm({
     defaultValues: {

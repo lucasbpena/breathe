@@ -25,8 +25,9 @@ export function NutritionIntakeProducts({ intake }: { intake: NutritionIntakeOut
       <CardHeader>
         <CardTitle>Produtos do período</CardTitle>
         <CardDescription>
-          Do que mais trouxe calorias ao que menos. Produtos sem calorias cadastradas ficam de fora
-          da estimativa; abra o produto para preencher a informação nutricional.
+          Do que mais trouxe calorias ao que menos. Só entram produtos de categorias com informação
+          nutricional; os que ainda não têm calorias ficam de fora da estimativa. Abra o produto
+          para preencher.
         </CardDescription>
       </CardHeader>
       <CardContent className="px-2 sm:px-6">

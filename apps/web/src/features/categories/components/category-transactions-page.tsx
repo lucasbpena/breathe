@@ -21,8 +21,9 @@ import {
   type TransactionsSearch,
 } from "@/features/transactions/transactions.presentation";
 import { categoryTypeLabels } from "../categories.presentation";
-import { categoryQueryOptions } from "../categories.queries";
+import { categoriesQueryOptions, categoryQueryOptions } from "../categories.queries";
 import { CategoryIcon } from "../category-icons";
+import { CategorySubcategoriesSummary } from "./category-subcategories-summary";
 
 export type CategoryTransactionsSearch = TransactionsSearch & {
   personScope?: string;
@@ -40,6 +41,7 @@ export function CategoryTransactionsPage({
   onSearchChange,
 }: CategoryTransactionsPageProps) {
   const categoryQuery = useQuery(categoryQueryOptions(categoryId));
+  const categories = useQuery(categoriesQueryOptions()).data ?? [];
 
   return (
     <ProtectedRoute>
@@ -60,6 +62,7 @@ export function CategoryTransactionsPage({
             onSearchChange={onSearchChange}
             scope={getCategoryTransactionsScope(
               categoryQuery.data,
+              categories,
               search.period ?? getCurrentPeriod(),
               search.personScope ?? "admin",
               (personScope) =>
@@ -79,11 +82,14 @@ export function CategoryTransactionsPage({
 
 function getCategoryTransactionsScope(
   category: CategoryOutput,
+  categories: CategoryOutput[],
   period: string,
   personScope: string,
   onPersonScopeChange: (value: string) => void,
 ) {
   const periodLabel = formatPeriod(period);
+  const parent = categories.find((item) => item.id === category.parentId);
+  const subcategories = categories.filter((item) => item.parentId === category.id);
 
   return {
     adminPersonOnly: personScope === "admin",
@@ -96,14 +102,17 @@ function getCategoryTransactionsScope(
         { label: "Visão geral", href: "/dashboard" },
         { label: "Organização" },
         { label: "Categorias", href: "/categories" },
+        ...(parent ? [{ label: parent.name, href: `/categories/${parent.id}` }] : []),
         { label: category.name },
       ],
       summary: (
         <CategoryTransactionsSummary
           category={category}
+          parentName={parent?.name}
           period={period}
           periodLabel={periodLabel}
           personScope={personScope}
+          subcategories={subcategories}
           onPersonScopeChange={onPersonScopeChange}
         />
       ),
@@ -115,15 +124,19 @@ function getCategoryTransactionsScope(
 
 function CategoryTransactionsSummary({
   category,
+  parentName,
   period,
   periodLabel,
   personScope,
+  subcategories,
   onPersonScopeChange,
 }: {
   category: CategoryOutput;
+  parentName?: string;
   period: string;
   periodLabel: string;
   personScope: string;
+  subcategories: CategoryOutput[];
   onPersonScopeChange: (value: string) => void;
 }) {
   const peopleQuery = useQuery(peopleQueryOptions());
@@ -160,6 +173,7 @@ function CategoryTransactionsSummary({
       endPeriod: period,
       startPeriod: period,
       personScope,
+      subcategoryMode: category.parentId ? "separate" : "rollUp",
     }),
     placeholderData: undefined,
   });
@@ -190,6 +204,16 @@ function CategoryTransactionsSummary({
             ))}
           </SelectContent>
         </Select>
+      }
+      details={
+        subcategories.length ? (
+          <CategorySubcategoriesSummary
+            category={category}
+            period={period}
+            personScope={personScope}
+            subcategories={subcategories}
+          />
+        ) : undefined
       }
       eyebrow={`Histórico de ${periodLabel}`}
       identity={
@@ -234,7 +258,7 @@ function CategoryTransactionsSummary({
           <MoneyValue amount={categoryAmount} />
         )
       }
-      subtitle={`Categoria de ${categoryTypeLabels[category.type].toLocaleLowerCase("pt-BR")} · ${selected?.label ?? "Pessoa indisponível"}`}
+      subtitle={`${parentName ? `Subcategoria de ${parentName}` : `Categoria de ${categoryTypeLabels[category.type].toLocaleLowerCase("pt-BR")}`} · ${selected?.label ?? "Pessoa indisponível"}`}
       title={category.name}
       variant="soft"
     />

@@ -8,6 +8,7 @@ import {
   createBudgetDraft,
   getPreviousBudgetPeriod,
 } from "@openmonetis/domain/budgets";
+import type { CategoryHierarchyNode } from "@openmonetis/domain/categories";
 import { getPeriodEndDate } from "@openmonetis/domain/transactions";
 import type {
   BudgetOutput,
@@ -55,7 +56,8 @@ type BudgetCategoriesRepository = {
   findByIdForUser(
     id: string,
     userId: string,
-  ): Promise<{ id: string; type: "income" | "expense" } | null>;
+  ): Promise<{ id: string; type: "income" | "expense"; parentId: string | null } | null>;
+  listByUser(userId: string): Promise<CategoryHierarchyNode[]>;
 };
 
 export function createBudgetsService(
@@ -67,17 +69,29 @@ export function createBudgetsService(
     if (category?.type !== "expense") {
       throw notFound("Expense category not found", "expense_category_not_found");
     }
+    if (category.parentId !== null) {
+      throw badRequest(
+        "Budgets apply to top-level categories only",
+        "budget_category_is_subcategory",
+      );
+    }
     return category;
   }
 
   async function list(userId: string, query: ListBudgetsQuery) {
     const periodEnd = getPeriodEndDate(query.period);
-    const [budgetRows, spendingEntries, recurringRules] = await Promise.all([
+    const [budgetRows, spendingEntries, recurringRules, categories] = await Promise.all([
       repository.listByUserAndPeriod(userId, query.period),
       repository.listSpendingEntries(userId, query.period),
       repository.listRecurringRules(userId, periodEnd),
+      categoriesRepository.listByUser(userId),
     ]);
-    const spending = calculateBudgetSpending(spendingEntries, recurringRules, query.period);
+    const spending = calculateBudgetSpending(
+      spendingEntries,
+      recurringRules,
+      query.period,
+      categories,
+    );
     const overview = calculateBudgetOverview(budgetRows, spending);
     const items = budgetRows
       .map((budget) =>

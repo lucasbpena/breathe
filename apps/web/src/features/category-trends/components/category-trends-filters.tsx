@@ -1,7 +1,4 @@
-import type {
-  CategoryTrendsOutput,
-  ListCategoryTrendsQuery,
-} from "@openmonetis/validators/category-trends";
+import type { CategoryTrendsOutput } from "@openmonetis/validators/category-trends";
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useState } from "react";
 import {
@@ -14,13 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { CategoryIcon } from "@/features/categories/category-icons";
+import type { CategoryTrendsRequest } from "../category-trends.api";
 import { getCategoryTrendsPeriodRange, getCurrentPeriod } from "../category-trends.presentation";
 
 type CategoryTrendsFiltersProps = {
   categories: CategoryTrendsOutput["availableCategories"];
-  filters: ListCategoryTrendsQuery;
+  filters: CategoryTrendsRequest;
   isFetching: boolean;
-  onChange: (filters: ListCategoryTrendsQuery) => void;
+  onChange: (filters: CategoryTrendsRequest) => void;
 };
 
 export function CategoryTrendsFilters({

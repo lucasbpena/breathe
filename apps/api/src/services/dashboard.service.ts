@@ -9,6 +9,7 @@ import {
   calculateDashboardPeopleExpenses,
   createDefaultDashboardWidgetPreferences,
   type DashboardCategoryBreakdownEntry,
+  type DashboardCategoryNode,
   type DashboardExpenseDistributionEntry,
   type DashboardMetricEntry,
   type DashboardPaymentStatusEntry,
@@ -104,6 +105,7 @@ export type DashboardRecurringRuleRecord = {
 
 export type DashboardRepository = {
   deleteWidgetPreferences(userId: string): Promise<void>;
+  listCategoriesForUser(userId: string): Promise<DashboardCategoryNode[]>;
   findWidgetPreferences(userId: string): Promise<{ hidden: string[]; order: string[] } | null>;
   listInvoiceStatuses(
     userId: string,
@@ -726,9 +728,10 @@ export function createDashboardService(
       userId: string,
     ): Promise<DashboardCategoryBreakdownOutput> {
       const previousPeriod = addMonthsToPeriod(period, -1);
-      const [transactions, recurringRules] = await Promise.all([
+      const [transactions, recurringRules, categories] = await Promise.all([
         repository.listTransactionsThroughPeriod(userId, period, previousPeriod),
         repository.listRecurringRules(userId, getPeriodEndDate(period)),
+        repository.listCategoriesForUser(userId),
       ]);
       const recurringTransactions = expandRecurringRules(
         recurringRules,
@@ -768,7 +771,7 @@ export function createDashboardService(
       return {
         period,
         previousPeriod,
-        ...calculateDashboardCategoryBreakdown(entries, period, previousPeriod),
+        ...calculateDashboardCategoryBreakdown(entries, period, previousPeriod, categories),
       };
     },
 

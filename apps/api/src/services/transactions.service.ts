@@ -5,6 +5,8 @@ import {
   resolveCardClosingRule,
 } from "@openmonetis/domain/cards";
 import {
+  type CategoryHierarchyNode,
+  expandCategoryIdsWithSubcategories,
   internalTransferCategoryName,
   invoicePaymentCategoryName,
 } from "@openmonetis/domain/categories";
@@ -118,6 +120,7 @@ export type TransactionsServiceDependencies = Pick<
   findCategoryByIdForUser: typeof import("../repositories/categories.repository").findCategoryByIdForUser;
   findSystemCategoryByNameForUser: typeof import("../repositories/categories.repository").findSystemCategoryByNameForUser;
   listCategoriesByIdsForUser: typeof import("../repositories/categories.repository").listCategoriesByIdsForUser;
+  listCategoriesForUser: (userId: string) => Promise<CategoryHierarchyNode[]>;
   findAdminPersonByUserId: typeof import("../repositories/people.repository").findAdminPersonByUserId;
   findPersonByIdForUser: typeof import("../repositories/people.repository").findPersonByIdForUser;
   listPeopleByIdsForUser: typeof import("../repositories/people.repository").listPeopleByIdsForUser;
@@ -255,6 +258,7 @@ export function createTransactionsService(
     insertTransactionsWithSplits,
     insertTransferWithBalanceCheck,
     listCategoriesByIdsForUser,
+    listCategoriesForUser,
     listImportCategoryMappingsForUser,
     listImportedExternalIdsForUser,
     listPaidInvoicePeriodsForUser,
@@ -1140,7 +1144,16 @@ export function createTransactionsService(
     return toTransactionOutput(transaction);
   }
 
-  async function listTransactions(userId: string, query: ListTransactionsQuery) {
+  async function listTransactions(userId: string, requestedQuery: ListTransactionsQuery) {
+    const query = {
+      ...requestedQuery,
+      categoryIds: requestedQuery.categoryIds.length
+        ? expandCategoryIdsWithSubcategories(
+            requestedQuery.categoryIds,
+            await listCategoriesForUser(userId),
+          )
+        : requestedQuery.categoryIds,
+    };
     const accountStatement = query.view === "accountStatement";
     const period = query.period ?? currentPeriod();
     const periodEnd = query.dateEnd ? toDate(query.dateEnd) : getPeriodEndDate(period);

@@ -1,5 +1,8 @@
 import { z } from "@hono/zod-openapi";
-import { categoryTrendChangeKinds } from "@openmonetis/domain/category-trends";
+import {
+  categoryTrendChangeKinds,
+  categoryTrendSubcategoryModes,
+} from "@openmonetis/domain/category-trends";
 
 const periodSchema = z.string().regex(/^[1-9]\d{3}-(0[1-9]|1[0-2])$/);
 const categoryIdsSchema = z
@@ -47,6 +50,7 @@ export const ListCategoryTrendsQuerySchema = z
     }),
     categoryIds: categoryIdsSchema,
     personScope: z.union([z.enum(["admin", "all"]), z.uuid()]).optional(),
+    subcategoryMode: z.enum(categoryTrendSubcategoryModes).default("rollUp"),
   })
   .superRefine((query, context) => {
     const startIndex = toPeriodIndex(query.startPeriod);
@@ -96,6 +100,7 @@ export const CategoryTrendValueOutputSchema = z
 export const CategoryTrendAvailableCategoryOutputSchema = z
   .object({
     categoryId: z.uuid(),
+    parentId: z.uuid().nullable(),
     name: z.string(),
     icon: z.string().nullable(),
     type: z.enum(["income", "expense"]),

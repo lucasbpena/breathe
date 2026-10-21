@@ -18,7 +18,12 @@ import { DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  buildCategoryTree,
+  formatCategoryPath,
+} from "@/features/categories/categories.presentation";
 import { categoriesQueryOptions } from "@/features/categories/categories.queries";
+import { CategoryPathLabel } from "@/features/categories/components/category-path-label";
 import { showInvalidFormToast } from "@/lib/form-feedback";
 import { useCreateProductMutation, useUpdateProductMutation } from "../products.mutations";
 import {
@@ -39,8 +44,6 @@ type ProductDialogProps = {
   onSaved?: (product: ProductOutput) => void;
 };
 
-const noCategory = "none";
-
 export function ProductDialog({
   product,
   initialName,
@@ -53,14 +56,16 @@ export function ProductDialog({
   const createMutation = useCreateProductMutation();
   const updateMutation = useUpdateProductMutation();
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const categories = (categoriesQuery.data ?? []).filter(
-    (category) => category.type === "expense" && !category.isSystem,
+  const categories = buildCategoryTree(
+    (categoriesQuery.data ?? []).filter(
+      (category) => category.type === "expense" && !category.isSystem,
+    ),
   );
   const unitLocked = Boolean(product && product.priceSummary.purchaseCount > 0);
   const form = useForm({
     defaultValues: {
       name: product?.name ?? initialName ?? "",
-      categoryId: product?.categoryId ?? noCategory,
+      categoryId: product?.categoryId ?? "",
       contentUnit: product?.contentUnit ?? ("package" as ProductContentUnit),
       packageContent: formatDecimalInput(product?.packageContent),
       energyKcal: formatDecimalInput(product?.energyKcal),
@@ -72,17 +77,22 @@ export function ProductDialog({
     onSubmitInvalid: showInvalidFormToast,
     onSubmit: async ({ value }) => {
       setSubmitError(null);
+      // Products in categories without nutrition carry none.
+      const nutrition = (raw: string) =>
+        categories.find((category) => category.id === value.categoryId)?.tracksNutrition
+          ? parseDecimalInput(raw)
+          : null;
       const input = {
         name: value.name,
-        categoryId: value.categoryId === noCategory ? null : value.categoryId,
+        categoryId: value.categoryId,
         contentUnit: value.contentUnit,
         packageContent:
           value.contentUnit === "package" ? null : parseDecimalInput(value.packageContent),
-        energyKcal: parseDecimalInput(value.energyKcal),
-        proteinGrams: parseDecimalInput(value.proteinGrams),
-        carbohydrateGrams: parseDecimalInput(value.carbohydrateGrams),
-        addedSugarGrams: parseDecimalInput(value.addedSugarGrams),
-        fatGrams: parseDecimalInput(value.fatGrams),
+        energyKcal: nutrition(value.energyKcal),
+        proteinGrams: nutrition(value.proteinGrams),
+        carbohydrateGrams: nutrition(value.carbohydrateGrams),
+        addedSugarGrams: nutrition(value.addedSugarGrams),
+        fatGrams: nutrition(value.fatGrams),
       };
       let saved: ProductOutput;
       try {
@@ -161,34 +171,49 @@ export function ProductDialog({
               </div>
             )}
           </form.Field>
-          <form.Field name="categoryId">
+          <form.Field
+            name="categoryId"
+            validators={{
+              onSubmit: ({ value }) => (value ? undefined : "Escolha a categoria do produto."),
+            }}
+          >
             {(field) => (
               <div className="grid gap-1.5">
-                <Label htmlFor={`${id}-category`}>
-                  Categoria <span className="font-normal text-muted-foreground">(opcional)</span>
-                </Label>
+                <Label htmlFor={`${id}-category`}>Categoria</Label>
                 <Select
                   disabled={categoriesQuery.isLoading}
                   onValueChange={(next) => next && field.handleChange(next)}
                   value={field.state.value}
                 >
-                  <SelectTrigger className="h-11 w-full" id={`${id}-category`}>
-                    <SelectValue>
-                      {(selected: string) =>
-                        categories.find((category) => category.id === selected)?.name ??
-                        "Sem categoria"
-                      }
+                  <SelectTrigger
+                    aria-invalid={field.state.meta.errors.length > 0}
+                    className="h-11 w-full"
+                    id={`${id}-category`}
+                  >
+                    <SelectValue placeholder="Selecione">
+                      {(selected: string) => {
+                        const category = categories.find((item) => item.id === selected);
+                        return category ? formatCategoryPath(category) : "Selecione";
+                      }}
                     </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={noCategory}>Sem categoria</SelectItem>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                        <CategoryPathLabel category={category} />
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {field.state.meta.errors[0] ? (
+                  <p className="text-destructive text-xs" role="alert">
+                    {field.state.meta.errors[0]}
+                  </p>
+                ) : product && !product.categoryId ? (
+                  <p className="text-muted-foreground text-xs">
+                    Produto cadastrado sem categoria. Escolha uma para salvar.
+                  </p>
+                ) : null}
               </div>
             )}
           </form.Field>
@@ -255,38 +280,54 @@ export function ProductDialog({
               }
             </form.Subscribe>
           </div>
-          <fieldset className="grid gap-3 rounded-lg border p-3">
-            <form.Subscribe selector={(state) => state.values.contentUnit}>
-              {(contentUnit) => (
-                <legend className="px-1 font-medium text-sm">
-                  Informação nutricional{" "}
-                  <span className="font-normal text-muted-foreground">
-                    ({nutritionBasisLabels[contentUnit]}, opcional)
-                  </span>
-                </legend>
-              )}
-            </form.Subscribe>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {nutritionFields.map((nutrient) => (
-                <form.Field key={nutrient.name} name={nutrient.name}>
-                  {(field) => (
-                    <div className="grid gap-1.5">
-                      <Label className="text-xs" htmlFor={`${id}-${nutrient.name}`}>
-                        {nutrient.label} ({nutrient.unit})
-                      </Label>
-                      <Input
-                        id={`${id}-${nutrient.name}`}
-                        inputMode="decimal"
-                        onBlur={field.handleBlur}
-                        onChange={(event) => field.handleChange(event.target.value)}
-                        value={field.state.value}
-                      />
-                    </div>
-                  )}
-                </form.Field>
-              ))}
-            </div>
-          </fieldset>
+          <form.Subscribe selector={(state) => state.values.categoryId}>
+            {(categoryId) => {
+              const category = categories.find((item) => item.id === categoryId);
+              if (!category) return null;
+              if (!category.tracksNutrition) {
+                return (
+                  <p className="text-muted-foreground text-xs">
+                    {category.name} não tem informação nutricional. Para registrar calorias e
+                    macros, ative a opção na categoria.
+                  </p>
+                );
+              }
+              return (
+                <fieldset className="grid gap-3 rounded-lg border p-3">
+                  <form.Subscribe selector={(state) => state.values.contentUnit}>
+                    {(contentUnit) => (
+                      <legend className="px-1 font-medium text-sm">
+                        Informação nutricional{" "}
+                        <span className="font-normal text-muted-foreground">
+                          ({nutritionBasisLabels[contentUnit]}, opcional)
+                        </span>
+                      </legend>
+                    )}
+                  </form.Subscribe>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {nutritionFields.map((nutrient) => (
+                      <form.Field key={nutrient.name} name={nutrient.name}>
+                        {(field) => (
+                          <div className="grid gap-1.5">
+                            <Label className="text-xs" htmlFor={`${id}-${nutrient.name}`}>
+                              {nutrient.label} ({nutrient.unit})
+                            </Label>
+                            <Input
+                              id={`${id}-${nutrient.name}`}
+                              inputMode="decimal"
+                              onBlur={field.handleBlur}
+                              onChange={(event) => field.handleChange(event.target.value)}
+                              value={field.state.value}
+                            />
+                          </div>
+                        )}
+                      </form.Field>
+                    ))}
+                  </div>
+                </fieldset>
+              );
+            }}
+          </form.Subscribe>
           {submitError ? (
             <p className="text-destructive text-sm" role="alert">
               {submitError}

@@ -16,6 +16,10 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
+import {
+  buildCategoryTree,
+  formatCategoryPath,
+} from "@/features/categories/categories.presentation";
 
 import {
   type buildFilterSlugMap,
@@ -212,13 +216,13 @@ export function TransactionsFilters({
                   <MultiFilterSelect
                     label="Categoria"
                     onChange={(values) => setMultipleFilter("categories", values)}
-                    options={categories.flatMap((category) => {
+                    options={buildCategoryTree(categories).flatMap((category) => {
                       const value = categoriesSlugMap.idToSlug.get(category.id);
                       return value
                         ? [
                             {
                               value,
-                              label: category.name,
+                              label: formatCategoryPath(category),
                               group: category.type === "income" ? "Receitas" : "Despesas",
                               categoryIcon: category.icon,
                             },

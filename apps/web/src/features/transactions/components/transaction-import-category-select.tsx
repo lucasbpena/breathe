@@ -1,9 +1,8 @@
-import type { CategoryOutput } from "@openmonetis/validators/categories";
-
 import { MobileSelect as Select } from "@/components/forms/mobile-select";
 import { MobileSelectContent as SelectContent } from "@/components/forms/mobile-select-content";
 
 import { SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { CategoryTreeItem } from "@/features/categories/categories.presentation";
 import { CategoryOption, Field } from "./transaction-import-options";
 
 export function BulkCategorySelect({
@@ -14,7 +13,7 @@ export function BulkCategorySelect({
   rowCount,
   value,
 }: {
-  categories: CategoryOutput[];
+  categories: CategoryTreeItem[];
   label: string;
   mixed: boolean;
   onChange: (id: string) => void;
@@ -63,7 +62,7 @@ export function RowCategorySelect({
   onChange,
   value,
 }: {
-  categories: CategoryOutput[];
+  categories: CategoryTreeItem[];
   disabled: boolean;
   onChange: (id: string) => void;
   value: string;

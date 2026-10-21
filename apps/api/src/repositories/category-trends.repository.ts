@@ -24,6 +24,7 @@ export const categoryTrendsRepository = {
     const rows = await db
       .select({
         categoryId: categories.id,
+        parentId: categories.parentId,
         name: categories.name,
         icon: categories.icon,
         type: categories.type,

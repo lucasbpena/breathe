@@ -27,7 +27,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import {
+  buildCategoryTree,
+  type CategoryTreeItem,
+} from "@/features/categories/categories.presentation";
 import { CategoryIcon } from "@/features/categories/category-icons";
+import { CategoryPathLabel } from "@/features/categories/components/category-path-label";
 import { showInvalidFormToast } from "@/lib/form-feedback";
 import {
   inboxRuleAmountOperatorLabels,
@@ -57,6 +62,9 @@ export function InboxRuleForm({
 }) {
   const id = useId();
   const [error, setError] = useState<string | null>(null);
+  const expenseCategories = buildCategoryTree(
+    categories.filter((category) => category.type === "expense"),
+  );
   const form = useForm({
     defaultValues: {
       name: rule?.name ?? "",
@@ -317,7 +325,9 @@ export function InboxRuleForm({
                   <SelectTrigger className="w-full" id={`${id}-category`}>
                     <SelectValue>
                       <CategoryOption
-                        category={categories.find((category) => category.id === field.state.value)}
+                        category={expenseCategories.find(
+                          (category) => category.id === field.state.value,
+                        )}
                       />
                     </SelectValue>
                   </SelectTrigger>
@@ -325,13 +335,11 @@ export function InboxRuleForm({
                     <SelectItem value="none">
                       <CategoryOption />
                     </SelectItem>
-                    {categories
-                      .filter((category) => category.type === "expense")
-                      .map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          <CategoryOption category={category} />
-                        </SelectItem>
-                      ))}
+                    {expenseCategories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        <CategoryOption category={category} />
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -437,7 +445,7 @@ function getOperatorLabel(operator: string) {
   );
 }
 
-function CategoryOption({ category }: { category?: CategoryOutput }) {
+function CategoryOption({ category }: { category?: CategoryTreeItem }) {
   return (
     <span className="flex min-w-0 items-center gap-2">
       <span className="grid size-6 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
@@ -447,7 +455,9 @@ function CategoryOption({ category }: { category?: CategoryOutput }) {
           <CircleOff aria-hidden="true" className="size-3.5" />
         )}
       </span>
-      <span className="truncate">{category?.name ?? "Não preencher"}</span>
+      <span className="truncate">
+        {category ? <CategoryPathLabel category={category} /> : "Não preencher"}
+      </span>
     </span>
   );
 }

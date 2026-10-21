@@ -486,4 +486,15 @@ export const dashboardRepository = {
         and(eq(invoicePaymentAllocations.userId, userId), lte(invoicePayments.period, period)),
       );
   },
+  listCategoriesForUser(userId) {
+    return db
+      .select({
+        id: categories.id,
+        name: categories.name,
+        icon: categories.icon,
+        parentId: categories.parentId,
+      })
+      .from(categories)
+      .where(eq(categories.userId, userId));
+  },
 } satisfies DashboardRepository;

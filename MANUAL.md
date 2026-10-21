@@ -111,6 +111,16 @@ pela rede. Sem acesso público ao Breathe, ele fica indisponível. O protocolo e
 Cada produto tem uma **metragem**: gramas, mililitros ou "sem metragem". Um produto sem metragem,
 como um pacote de pão, é contado só por unidades e tem o preço em R$ por unidade.
 
+Cada produto também tem uma **categoria** de despesa, que pode ser uma subcategoria, como
+"Mercado › Hortifruti". Ela é obrigatória: um produto cadastrado antes sem categoria pede uma na
+próxima edição. Uma categoria usada por produtos não pode ser excluída nem mudar de tipo.
+
+A **informação nutricional** (calorias, proteínas, carboidratos, açúcar adicionado e gorduras, todos
+opcionais) só aparece para produtos de categorias com a opção **Tem informação nutricional**, em
+**Organização → Categorias**. Alimentação, Mercado, Restaurantes e Delivery já vêm com ela ligada. Uma
+subcategoria nova começa com a escolha da categoria pai, mas pode mudar. Ao salvar um produto de
+categoria sem essa opção, os valores nutricionais são apagados.
+
 ## Físico
 
 - **Físico → Corpo** mostra o corpo de frente e de costas. Toque em um músculo para ver a medida
@@ -119,7 +129,8 @@ como um pacote de pão, é contado só por unidades e tem o preço em R$ por uni
   substitui o valor.
 - **Físico → Nutrição** estima calorias e macros pelos itens das compras dos últimos 7, 30 ou 90
   dias. Cada item conta no dia da compra, e a média diária divide o total pelos dias do período.
-  Produtos sem calorias cadastradas ficam de fora e aparecem marcados na tabela.
+  Só entram produtos de categorias com informação nutricional. Os que ainda não têm calorias
+  cadastradas ficam de fora da soma e aparecem marcados na tabela.
 
 ## Captura pelo WhatsApp
 

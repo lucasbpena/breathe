@@ -13,7 +13,7 @@ const priceSchema = z.number().nonnegative();
 export const CreateProductInputSchema = z
   .object({
     name: z.string().trim().min(1).max(120),
-    categoryId: z.uuid().nullable().optional(),
+    categoryId: z.uuid(),
     contentUnit: z.enum(productContentUnits),
     packageContent: productContentSchema.nullable().optional(),
     energyKcal: nutrientSchema.nullable().optional(),
@@ -84,6 +84,7 @@ export const ProductOutputSchema = z
     categoryId: z.uuid().nullable(),
     categoryName: z.string().nullable(),
     categoryIcon: z.string().nullable(),
+    categoryTracksNutrition: z.boolean(),
     contentUnit: z.enum(productContentUnits),
     packageContent: z.number().positive().nullable(),
     energyKcal: z.number().nonnegative().nullable(),

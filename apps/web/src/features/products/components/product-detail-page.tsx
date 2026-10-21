@@ -166,31 +166,33 @@ export function ProductDetailPage({ productId }: { productId: string }) {
                     <ProductAliases product={product} />
                   </CardContent>
                 </Card>
-                <Card className="border">
-                  <CardHeader>
-                    <CardTitle>Informação nutricional</CardTitle>
-                    <CardDescription>{nutritionBasisLabels[product.contentUnit]}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {nutrients.length > 0 ? (
-                      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                        {nutrients.map((nutrient) => (
-                          <div key={nutrient.name}>
-                            <dt className="text-muted-foreground text-xs">{nutrient.label}</dt>
-                            <dd className="font-medium tabular-nums">
-                              {nutrientFormatter.format(product[nutrient.name] ?? 0)}{" "}
-                              {nutrient.unit}
-                            </dd>
-                          </div>
-                        ))}
-                      </dl>
-                    ) : (
-                      <p className="text-muted-foreground text-sm">
-                        Sem informação nutricional. Preencha em Editar.
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
+                {product.categoryTracksNutrition ? (
+                  <Card className="border">
+                    <CardHeader>
+                      <CardTitle>Informação nutricional</CardTitle>
+                      <CardDescription>{nutritionBasisLabels[product.contentUnit]}</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {nutrients.length > 0 ? (
+                        <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                          {nutrients.map((nutrient) => (
+                            <div key={nutrient.name}>
+                              <dt className="text-muted-foreground text-xs">{nutrient.label}</dt>
+                              <dd className="font-medium tabular-nums">
+                                {nutrientFormatter.format(product[nutrient.name] ?? 0)}{" "}
+                                {nutrient.unit}
+                              </dd>
+                            </div>
+                          ))}
+                        </dl>
+                      ) : (
+                        <p className="text-muted-foreground text-sm">
+                          Sem informação nutricional. Preencha em Editar.
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
 
               <Card className="border">

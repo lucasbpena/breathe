@@ -1,5 +1,5 @@
 import type { CardClosingRule } from "./cards";
-import { invoicePaymentCategoryName } from "./categories";
+import { createRootCategoryResolver, invoicePaymentCategoryName } from "./categories";
 import { getRecurringDueDate } from "./recurring-expenses";
 import {
   addMonthsToPeriod,
@@ -13,12 +13,15 @@ import {
 } from "./transactions";
 
 export const categoryTrendChangeKinds = ["increase", "decrease", "stable", "started"] as const;
+export const categoryTrendSubcategoryModes = ["rollUp", "separate"] as const;
 
 export type CategoryTrendType = "income" | "expense";
 export type CategoryTrendChangeKind = (typeof categoryTrendChangeKinds)[number];
+export type CategoryTrendSubcategoryMode = (typeof categoryTrendSubcategoryModes)[number];
 
 export type CategoryTrendCategory = {
   categoryId: string;
+  parentId: string | null;
   name: string;
   icon: string | null;
   type: CategoryTrendType;
@@ -108,6 +111,7 @@ export function calculateCategoryTrends(input: {
   startPeriod: string;
   endPeriod: string;
   categoryIds?: readonly string[];
+  subcategoryMode?: CategoryTrendSubcategoryMode;
   categories: readonly CategoryTrendCategory[];
   actualEntries: readonly CategoryTrendActualEntry[];
   recurringRules: readonly CategoryTrendRecurringRule[];
@@ -115,8 +119,18 @@ export function calculateCategoryTrends(input: {
   const periods = listPeriods(input.startPeriod, input.endPeriod);
   const lookbackPeriod = addMonthsToPeriod(input.startPeriod, -1);
   const selectedCategoryIds = input.categoryIds?.length ? new Set(input.categoryIds) : null;
+  const rollUp = (input.subcategoryMode ?? "rollUp") === "rollUp";
+  const reportCategoryId = rollUp
+    ? createRootCategoryResolver(
+        input.categories.map((category) => ({
+          id: category.categoryId,
+          parentId: category.parentId,
+        })),
+      )
+    : (categoryId: string) => categoryId;
   const visibleCategories = input.categories.filter(
-    (category) => category.name !== invoicePaymentCategoryName,
+    (category) =>
+      category.name !== invoicePaymentCategoryName && (!rollUp || category.parentId === null),
   );
   const availableCategories = visibleCategories
     .filter((category) => !selectedCategoryIds || selectedCategoryIds.has(category.categoryId))
@@ -131,7 +145,8 @@ export function calculateCategoryTrends(input: {
     if (entry.origin === "invoicePayment" || entry.origin === "accountBalanceAdjustment") {
       continue;
     }
-    const category = categoryById.get(entry.categoryId);
+    const categoryId = reportCategoryId(entry.categoryId);
+    const category = categoryById.get(categoryId);
     if (!category || category.type !== entry.type) continue;
     const amount =
       category.type === "expense"
@@ -142,19 +157,13 @@ export function calculateCategoryTrends(input: {
           })
         : Math.abs(Number(entry.amount));
     if (amount === 0) continue;
-    addCategoryAmount(
-      amountsByCategory,
-      entry.categoryId,
-      entry.period,
-      "actualCents",
-      amount,
-      true,
-    );
+    addCategoryAmount(amountsByCategory, categoryId, entry.period, "actualCents", amount, true);
   }
 
   for (const rule of input.recurringRules) {
     if (rule.status !== "active") continue;
-    const category = categoryById.get(rule.categoryId);
+    const categoryId = reportCategoryId(rule.categoryId);
+    const category = categoryById.get(categoryId);
     if (!category || category.type !== rule.type) continue;
 
     for (const purchasePeriod of listPeriods(
@@ -178,7 +187,7 @@ export function calculateCategoryTrends(input: {
         if (transactionPeriod < lookbackPeriod || transactionPeriod > input.endPeriod) continue;
         addCategoryAmount(
           amountsByCategory,
-          rule.categoryId,
+          categoryId,
           transactionPeriod,
           "recurringCents",
           rule.amount,

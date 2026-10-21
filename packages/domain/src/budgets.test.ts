@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { calculateBudgetOverview } from "./budgets";
+import { calculateBudgetOverview, calculateBudgetSpending } from "./budgets";
 
 test("keeps category excess separate from remaining limits", () => {
   const result = calculateBudgetOverview(
@@ -54,4 +54,31 @@ test("returns no unbudgeted expenses for an empty month", () => {
   });
   assert.deepEqual(result.unbudgetedItems, []);
   assert.equal(result.unbudgetedCommittedAmount, 0);
+});
+
+test("subcategory spending counts toward the parent budget", () => {
+  const spending = calculateBudgetSpending(
+    [
+      { categoryId: "food", origin: "regular", type: "expense", amount: "-30.00" },
+      { categoryId: "groceries", origin: "regular", type: "expense", amount: "-50.00" },
+      { categoryId: "fuel", origin: "regular", type: "expense", amount: "-20.00" },
+    ],
+    [],
+    "2026-10",
+    [
+      { id: "food", parentId: null },
+      { id: "groceries", parentId: "food" },
+      { id: "transport", parentId: null },
+      { id: "fuel", parentId: "transport" },
+    ],
+  );
+  const overview = calculateBudgetOverview([{ categoryId: "food", amount: 100 }], spending);
+
+  assert.equal(spending.actualByCategory.get("food"), 80);
+  assert.equal(spending.actualByCategory.has("groceries"), false);
+  assert.equal(overview.progressByCategory.get("food")?.actualSpentAmount, 80);
+  assert.deepEqual(
+    overview.unbudgetedItems.map((item) => [item.categoryId, item.committedAmount]),
+    [["transport", 20]],
+  );
 });

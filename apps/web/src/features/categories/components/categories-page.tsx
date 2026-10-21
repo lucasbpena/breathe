@@ -21,6 +21,7 @@ import {
   useDeleteCategoryMutation,
   useReplaceCategoryMutation,
 } from "../categories.mutations";
+import { filterCategoryTree, getCategoryErrorMessage } from "../categories.presentation";
 import { categoriesQueryOptions } from "../categories.queries";
 import { CategoriesTable } from "./categories-table";
 import { CategoryDialog } from "./category-dialog";
@@ -33,10 +34,14 @@ export function CategoriesPage() {
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CategoryOutput | null>(null);
+  const [parentForNew, setParentForNew] = useState<CategoryOutput | null>(null);
   const categories = query.data ?? [];
   function changeOpen(next: boolean) {
     setOpen(next);
-    if (!next) setEditing(null);
+    if (!next) {
+      setEditing(null);
+      setParentForNew(null);
+    }
   }
   async function save(input: CreateCategoryInput | ReplaceCategoryInput) {
     if (editing)
@@ -50,9 +55,10 @@ export function CategoriesPage() {
       toast.success("Categoria removida");
     } catch (error) {
       toast.error(
-        error instanceof ApiClientError && error.code === "category_in_use"
-          ? "Categoria em uso. Altere os lançamentos e remova os orçamentos vinculados antes de excluir."
-          : "Não foi possível remover a categoria. Tente novamente.",
+        getCategoryErrorMessage(
+          error instanceof ApiClientError ? error.code : undefined,
+          "Não foi possível remover a categoria. Tente novamente.",
+        ),
       );
     }
   }
@@ -95,12 +101,9 @@ export function CategoriesPage() {
                 </TabsTrigger>
               </TabsList>
               {(["expense", "income"] as const).map((type) => {
-                const items = categories.filter(
-                  (item) =>
-                    item.type === type &&
-                    item.name
-                      .toLocaleLowerCase("pt-BR")
-                      .includes(search.toLocaleLowerCase("pt-BR")),
+                const items = filterCategoryTree(
+                  categories.filter((item) => item.type === type),
+                  search,
                 );
                 return (
                   <TabsContent className="min-w-0 pt-5" key={type} value={type}>
@@ -109,6 +112,10 @@ export function CategoriesPage() {
                         <div className="min-w-0 max-w-full overflow-x-auto">
                           <CategoriesTable
                             categories={items}
+                            onAddSubcategory={(parent) => {
+                              setParentForNew(parent);
+                              setOpen(true);
+                            }}
                             onEdit={(category) => {
                               setEditing(category);
                               setOpen(true);
@@ -132,7 +139,13 @@ export function CategoriesPage() {
           ) : null}
         </section>
       </main>
-      <CategoryDialog category={editing} onOpenChange={changeOpen} onSubmit={save} open={open} />
+      <CategoryDialog
+        category={editing}
+        defaultParent={parentForNew}
+        onOpenChange={changeOpen}
+        onSubmit={save}
+        open={open}
+      />
     </ProtectedRoute>
   );
 }

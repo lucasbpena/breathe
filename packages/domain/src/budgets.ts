@@ -1,4 +1,5 @@
 import type { CardClosingRule } from "./cards";
+import { type CategoryHierarchyNode, createRootCategoryResolver } from "./categories";
 import { getRecurringDueDate } from "./recurring-expenses";
 import {
   addMonthsToPeriod,
@@ -118,7 +119,9 @@ export function calculateBudgetSpending(
   entries: BudgetSpendingEntry[],
   recurringRules: BudgetRecurringRule[],
   period: string,
+  categories: readonly CategoryHierarchyNode[],
 ): BudgetSpending {
+  const rootCategoryId = createRootCategoryResolver(categories);
   const actualByCategory = new Map<string, number>();
   const projectedByCategory = new Map<string, number>();
   let uncategorizedActualAmount = 0;
@@ -133,7 +136,8 @@ export function calculateBudgetSpending(
     ) {
       continue;
     }
-    if (entry.categoryId) addSignedAmount(actualByCategory, entry.categoryId, expenseImpact);
+    if (entry.categoryId)
+      addSignedAmount(actualByCategory, rootCategoryId(entry.categoryId), expenseImpact);
     else uncategorizedActualAmount += expenseImpact;
   }
 
@@ -161,7 +165,8 @@ export function calculateBudgetSpending(
         });
 
         if (transactionPeriod === period) {
-          if (rule.categoryId) addAmount(projectedByCategory, rule.categoryId, rule.amount);
+          if (rule.categoryId)
+            addAmount(projectedByCategory, rootCategoryId(rule.categoryId), rule.amount);
           else uncategorizedProjectedAmount += normalizedAmount(rule.amount);
         }
       }
