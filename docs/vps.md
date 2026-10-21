@@ -193,6 +193,18 @@ pnpm --filter @openmonetis/api capture:whatsapp
 
 ## 9. Na VPS: deixar a captura sempre ligada
 
+Ligue o systemd do usuário antes de qualquer `systemctl --user`. Sem isso, ele falha com
+"Failed to connect to bus".
+
+```bash
+sudo loginctl enable-linger "$USER"   # mantém o serviço sem sessão SSH aberta e depois de reboot
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=$XDG_RUNTIME_DIR/bus"
+systemctl --user status >/dev/null && echo "systemd do usuário ok"
+```
+
+Se a última linha não imprimir `systemd do usuário ok`, espere alguns segundos e rode de novo.
+
 ```bash
 mkdir -p ~/.config/systemd/user
 cat > ~/.config/systemd/user/breathe-capture.service <<'EOF'
@@ -214,7 +226,6 @@ WantedBy=default.target
 EOF
 systemctl --user daemon-reload
 systemctl --user enable --now breathe-capture
-sudo loginctl enable-linger "$USER"   # mantém o serviço sem sessão SSH aberta e depois de reboot
 journalctl --user -u breathe-capture -f
 ```
 
