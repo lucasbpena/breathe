@@ -234,6 +234,10 @@ O serviço é reiniciado se cair, inclusive quando sobe antes do banco depois de
 
 ## 10. Atualizar depois de mudar o código
 
+Se a atualização traz migration nova, faça o backup da seção 11 depois do `git pull` e antes do
+`up -d --build`. O `migrator` aplica as migrations nesse passo, e elas não têm volta. Depois do
+`git pull`, `git diff --name-only ORIG_HEAD HEAD -- packages/db/drizzle` lista as que chegaram.
+
 ```bash
 # neste computador
 git push vps main
