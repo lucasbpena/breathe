@@ -1,6 +1,7 @@
+import { readFile } from "node:fs/promises";
 import { serve } from "@hono/node-server";
 import { OpenAPIHono, z } from "@hono/zod-openapi";
-import { ok } from "@openmonetis/shared/api";
+import { fail, ok } from "@openmonetis/shared/api";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { auth } from "./auth";
@@ -49,7 +50,9 @@ import { applicationVersion, releasesRepository } from "./repositories/releases.
 import { settingsRepository } from "./repositories/settings.repository";
 import { storesRepository } from "./repositories/stores.repository";
 import * as transactionsRepository from "./repositories/transactions.repository";
+import { whatsappCaptureRepository } from "./repositories/whatsapp-capture.repository";
 import { createAccountsRoute } from "./routes/accounts";
+import { createAssistantRoute } from "./routes/assistant";
 import { createAttachmentsRoute } from "./routes/attachments";
 import { createBillsRoute } from "./routes/bills";
 import { createBodyMeasurementsRoute } from "./routes/body-measurements";
@@ -81,6 +84,7 @@ import { createSettingsRoute } from "./routes/settings";
 import { createStoresRoute } from "./routes/stores";
 import { createTransactionsRoute } from "./routes/transactions";
 import { createAccountsService } from "./services/accounts.service";
+import { createAssistantService } from "./services/assistant.service";
 import { createAttachmentsService } from "./services/attachments.service";
 import { createBillsService } from "./services/bills.service";
 import { createBodyMeasurementsService } from "./services/body-measurements.service";
@@ -239,6 +243,12 @@ const deviceTokensService = createDeviceTokensService(deviceTokensRepository, {
 });
 const deviceTokensRoute = createDeviceTokensRoute(deviceTokensService);
 const companionDeviceRoute = createCompanionDeviceRoute();
+const assistantRoute = createAssistantRoute(
+  createAssistantService(whatsappCaptureRepository, {
+    loadExtractionPrompt: () =>
+      readFile(new URL("../prompts/whatsapp-capture.md", import.meta.url), "utf8"),
+  }),
+);
 const inboxService = createInboxService(inboxRepository, {
   transactionCreator: transactionsService,
   rulesRepository: inboxRulesRepository,
@@ -464,6 +474,15 @@ app.use("/releases/*", privateCache);
 app.use("/releases", requireAuth);
 app.use("/releases/*", requireAuth);
 app.use("/api/auth/device/verify", privateCache);
+app.use("/api/assistant/*", privateCache);
+app.use(
+  "/api/assistant/extractions",
+  bodyLimit({
+    maxSize: 1024 * 1024,
+    onError: (context) => context.json(fail("Request body is too large", "payload_too_large"), 413),
+  }),
+);
+app.use("/api/assistant/*", requireDeviceToken);
 app.use("/api/inbox", privateCache);
 app.use("/api/inbox/*", privateCache);
 app.use(
@@ -568,6 +587,7 @@ app.route("/inbox-rules", inboxRulesRoute);
 app.route("/notifications", notificationsRoute);
 app.route("/releases", releasesRoute);
 app.route("/api/inbox", companionInboxRoute);
+app.route("/api/assistant", assistantRoute);
 
 app.openapi(
   {

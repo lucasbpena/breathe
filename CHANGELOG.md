@@ -22,6 +22,7 @@ O formato segue o [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e 
 - Peso e medidas pelo WhatsApp: mensagens como "peso 82,4, cintura 84" ficam pendentes em Físico → Corpo, com o valor que cada medida substitui, para confirmar, editar ou descartar.
 - Perguntas pelo WhatsApp: perguntas sobre gastos, compras, medidas e nutrição são respondidas na conversa a partir de um recorte somente leitura dos seus dados, sem gravar nada.
 - Subcategorias: uma categoria pode ter subcategorias (um nível, mesmo tipo da categoria pai), usadas em lançamentos, produtos, regras da Caixa de entrada e importação como qualquer categoria. Visão geral, Evolução por categoria e Orçamentos somam as subcategorias na categoria pai; filtrar lançamentos pela categoria pai inclui as subcategorias; a página da categoria mostra o valor de cada subcategoria no mês. Orçamentos continuam valendo só para categorias principais.
+- Rotas `/api/assistant/*` para processadores externos de mensagens, como o Breathe AI, autenticadas com token de dispositivo: catálogo de produtos e lojas, prompt e formato da extração, e registro da extração como rascunhos na Caixa de entrada e em Físico → Corpo, sem duplicar quando a mesma mensagem é enviada de novo.
 
 ### Alterado
 

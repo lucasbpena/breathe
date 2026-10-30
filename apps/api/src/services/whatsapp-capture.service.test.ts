@@ -85,6 +85,7 @@ function createMemoryRepository() {
     listLatestMeasurements: async () => [
       { kind: "weight", value: "83.00", measuredOn: "2026-10-12" },
     ],
+    ensureProcessedMessage: async () => "message-1",
   };
   return { repository, messages, drafts, measurementDrafts };
 }

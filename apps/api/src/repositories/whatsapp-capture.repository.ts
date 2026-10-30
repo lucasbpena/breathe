@@ -155,6 +155,27 @@ export const whatsappCaptureRepository: WhatsAppCaptureRepository = {
     });
   },
 
+  async ensureProcessedMessage(userId, message) {
+    const [inserted] = await db
+      .insert(whatsappMessages)
+      .values({ userId, ...message, status: "processed", processedAt: message.receivedAt })
+      .onConflictDoNothing({ target: [whatsappMessages.userId, whatsappMessages.externalId] })
+      .returning({ id: whatsappMessages.id });
+    if (inserted) return inserted.id;
+    const [existing] = await db
+      .select({ id: whatsappMessages.id })
+      .from(whatsappMessages)
+      .where(
+        and(
+          eq(whatsappMessages.userId, userId),
+          eq(whatsappMessages.externalId, message.externalId),
+        ),
+      )
+      .limit(1);
+    if (!existing) throw new Error("WhatsApp message disappeared while it was being registered");
+    return existing.id;
+  },
+
   listLatestMeasurements(userId) {
     return db
       .selectDistinctOn([bodyMeasurements.kind], {

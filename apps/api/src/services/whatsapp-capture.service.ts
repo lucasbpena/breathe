@@ -162,6 +162,14 @@ export type WhatsAppCaptureRepository = {
   listLatestMeasurements(
     userId: string,
   ): Promise<{ kind: BodyMeasurementKind; value: string; measuredOn: string }[]>;
+  /** Registers a message processed elsewhere, so it dedupes like any other. Returns its id. */
+  ensureProcessedMessage(
+    userId: string,
+    message: Pick<
+      WhatsAppMessageRecord,
+      "externalId" | "senderNumber" | "kind" | "text" | "receivedAt"
+    >,
+  ): Promise<string>;
 };
 
 /** Answers a question about the user's own data; built from read-only context. */
@@ -178,6 +186,22 @@ export type CapturedInMessage = {
     entries: { kind: BodyMeasurementKind; value: number }[];
   } | null;
   receipts: { store: string | null; date: string | null; amount: number | null }[];
+};
+
+type MessageToRecord = Pick<
+  WhatsAppMessageRecord,
+  "id" | "externalId" | "kind" | "text" | "receivedAt"
+>;
+
+type ExtractionRecorderRepository = Pick<
+  WhatsAppCaptureRepository,
+  "createDrafts" | "createMeasurementDraft" | "listLatestMeasurements"
+>;
+
+/** What a message left waiting for review, ready to become the reply. */
+export type RecordedExtraction = {
+  receipts: ReconciledReceipt[];
+  measurements: MeasurementReply | null;
 };
 
 const supportedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
@@ -254,15 +278,13 @@ export function createWhatsAppCaptureService(
       if (!parsed.success) throw new CaptureError("invalid_extraction", true);
       const extraction = parsed.data;
 
-      const receipts = extraction.receipts
-        .map((receipt) => reconcileReceipt(receipt, catalog))
-        .filter((receipt) => receipt.items.length > 0 || receipt.amount !== null);
-      const drafts = receipts.map((receipt, index) => buildDraft(message, receipt, index));
-      if (drafts.length) await repository.createDrafts(userId, message.id, drafts);
-
-      const measurements = extraction.measurements?.entries.length
-        ? await draftMeasurements(message, extraction.measurements, extraction.warnings)
-        : null;
+      const { receipts, measurements } = await recordExtraction(
+        repository,
+        userId,
+        message,
+        extraction,
+        catalog,
+      );
 
       let answer: string | null = null;
       let answerFailed = false;
@@ -349,39 +371,6 @@ export function createWhatsAppCaptureService(
     return { mimeType: media.mimeType, base64: media.base64 };
   }
 
-  async function draftMeasurements(
-    message: WhatsAppMessageRecord,
-    captured: NonNullable<MessageExtraction["measurements"]>,
-    warnings: string[],
-  ): Promise<MeasurementReply> {
-    const reconciled = reconcileCapturedMeasurements(
-      captured,
-      getCurrentDateInBrazil(message.receivedAt),
-    );
-    const kept = warnings.slice(0, 10);
-    if (reconciled.entries.length) {
-      await repository.createMeasurementDraft(userId, message.id, {
-        measuredOn: reconciled.measuredOn,
-        warnings: kept,
-        entries: reconciled.entries.map((entry) => ({
-          kind: entry.kind,
-          value: entry.value.toFixed(2),
-        })),
-      });
-    }
-    const latest = await repository.listLatestMeasurements(userId);
-    return {
-      ...reconciled,
-      warnings: kept,
-      latest: new Map(
-        latest.map((entry) => [
-          entry.kind,
-          { value: Number(entry.value), measuredOn: entry.measuredOn },
-        ]),
-      ),
-    };
-  }
-
   /** Replies only to the configured number. A failed reply never undoes the capture. */
   async function reply(message: WhatsAppMessageRecord, text: string) {
     try {
@@ -413,6 +402,88 @@ export function createWhatsAppCaptureService(
 }
 
 /**
+ * Turns an extraction into drafts for review. Both the WhatsApp worker and the assistant API use
+ * it, so a message becomes the same drafts wherever it was read.
+ */
+export async function recordExtraction(
+  repository: ExtractionRecorderRepository,
+  userId: string,
+  message: MessageToRecord,
+  extraction: MessageExtraction,
+  catalog: WhatsAppCaptureCatalog,
+): Promise<RecordedExtraction> {
+  const receipts = extraction.receipts
+    .map((receipt) => reconcileReceipt(receipt, catalog))
+    .filter((receipt) => receipt.items.length > 0 || receipt.amount !== null);
+  const drafts = receipts.map((receipt, index) => buildDraft(message, receipt, index));
+  if (drafts.length) await repository.createDrafts(userId, message.id, drafts);
+
+  const measurements = extraction.measurements?.entries.length
+    ? await draftMeasurements(
+        repository,
+        userId,
+        message,
+        extraction.measurements,
+        extraction.warnings,
+      )
+    : null;
+  return { receipts, measurements };
+}
+
+async function draftMeasurements(
+  repository: ExtractionRecorderRepository,
+  userId: string,
+  message: MessageToRecord,
+  captured: NonNullable<MessageExtraction["measurements"]>,
+  warnings: string[],
+): Promise<MeasurementReply> {
+  const reconciled = reconcileCapturedMeasurements(
+    captured,
+    getCurrentDateInBrazil(message.receivedAt),
+  );
+  const kept = warnings.slice(0, 10);
+  if (reconciled.entries.length) {
+    await repository.createMeasurementDraft(userId, message.id, {
+      measuredOn: reconciled.measuredOn,
+      warnings: kept,
+      entries: reconciled.entries.map((entry) => ({
+        kind: entry.kind,
+        value: entry.value.toFixed(2),
+      })),
+    });
+  }
+  const latest = await repository.listLatestMeasurements(userId);
+  return {
+    ...reconciled,
+    warnings: kept,
+    latest: new Map(
+      latest.map((entry) => [
+        entry.kind,
+        { value: Number(entry.value), measuredOn: entry.measuredOn },
+      ]),
+    ),
+  };
+}
+
+/** The catalog as Claude sees it: only what it needs to match names to ids. */
+export function toPromptCatalog(catalog: WhatsAppCaptureCatalog) {
+  return {
+    products: catalog.products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      aliases: product.aliases,
+      unit: product.contentUnit,
+    })),
+    stores: catalog.stores.map((store) => ({
+      id: store.id,
+      name: store.name,
+      branch: store.branch,
+      neighborhood: store.neighborhood,
+    })),
+  };
+}
+
+/**
  * The message text goes inside tags so Claude reads it as data, next to the user's catalog and
  * the moment it arrived, which resolves words such as "hoje" and "ontem".
  */
@@ -421,18 +492,6 @@ export function buildExtractionRequest(
   text: string | null,
   receivedAt: Date,
 ) {
-  const products = catalog.products.map((product) => ({
-    id: product.id,
-    name: product.name,
-    aliases: product.aliases,
-    unit: product.contentUnit,
-  }));
-  const stores = catalog.stores.map((store) => ({
-    id: store.id,
-    name: store.name,
-    branch: store.branch,
-    neighborhood: store.neighborhood,
-  }));
   const received = formatDateInBrazil(receivedAt, {
     weekday: "long",
     day: "2-digit",
@@ -444,7 +503,7 @@ export function buildExtractionRequest(
   return [
     `<recebida_em>${getCurrentDateInBrazil(receivedAt)} (${received})</recebida_em>`,
     "<catalogo>",
-    JSON.stringify({ products, stores }),
+    JSON.stringify(toPromptCatalog(catalog)),
     "</catalogo>",
     "<mensagem>",
     text ?? "(sem texto; só a imagem)",
@@ -453,7 +512,7 @@ export function buildExtractionRequest(
 }
 
 function buildDraft(
-  message: WhatsAppMessageRecord,
+  message: MessageToRecord,
   receipt: ReconciledReceipt,
   index: number,
 ): InboxReceiptDraft {

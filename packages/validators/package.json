@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     "./accounts": "./src/accounts.ts",
+    "./assistant": "./src/assistant.ts",
     "./auth": "./src/auth.ts",
     "./cards": "./src/cards.ts",
     "./categories": "./src/categories.ts",

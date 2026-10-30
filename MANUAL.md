@@ -172,6 +172,11 @@ Os textos que orientam a leitura e as respostas ficam em `apps/api/prompts/whats
 `apps/api/prompts/whatsapp-answer.md`. Mensagens de outros
 números são ignoradas e nunca respondidas.
 
+Um processador externo, como o Breathe AI, usa as rotas `/api/assistant/*` com um token criado em
+**Conectar aparelho**, na aba Companion dos Ajustes. Ele lê o catálogo, envia o que extraiu e recebe
+o texto da resposta. O resultado vira os mesmos rascunhos para revisar, e enviar a mesma mensagem de
+novo não cria nada em dobro. Perguntas e a foto da nota ainda não passam por essas rotas.
+
 ## Atualizando depois de mudar o código
 
 ```bash
